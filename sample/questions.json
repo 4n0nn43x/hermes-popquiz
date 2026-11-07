@@ -1,0 +1,87 @@
+{
+  "document": "runbook.md",
+  "title": "Kestrel Incident Runbook",
+  "format": "questions: the 8 valid questions of the sample game. wrong: 2 deliberately wrong drafts; each one replaces questions[replaces] in a first draft, is refused with expected_code, then the agent resends the valid question (the refused then corrected demo step).",
+  "questions": [
+    {
+      "prompt": "Within how many minutes must the primary on-call engineer acknowledge a page?",
+      "choices": ["5 minutes", "10 minutes", "15 minutes", "30 minutes"],
+      "answer_index": 0,
+      "source_quote": "The primary must acknowledge a page within 5 minutes.",
+      "explanation": "After 5 minutes without acknowledgement the page escalates to the secondary engineer."
+    },
+    {
+      "prompt": "How long are audit logs kept?",
+      "choices": ["30 days", "35 days", "400 days", "2 years"],
+      "answer_index": 2,
+      "source_quote": "Audit logs are kept for 400 days.",
+      "explanation": "Application logs are kept 30 days, but audit logs 400 days."
+    },
+    {
+      "prompt": "Who must approve a rollback that touches more than one service?",
+      "choices": ["Nobody, rollbacks are always allowed", "The incident commander", "The database owner on call", "The communications lead"],
+      "answer_index": 1,
+      "source_quote": "A rollback that touches more than one service needs the commander's explicit approval in the channel.",
+      "explanation": "A single-service rollback needs no approval; more than one service needs the incident commander."
+    },
+    {
+      "prompt": "Above which PostgreSQL replication lag does the on-call engineer get paged?",
+      "choices": ["5 seconds", "60 seconds", "120 seconds", "300 seconds"],
+      "answer_index": 2,
+      "source_quote": "PostgreSQL replication lag | above 120 seconds",
+      "explanation": "Replication lag above 120 seconds pages as a SEV2. The 5 second figure is the failover condition."
+    },
+    {
+      "prompt": "How often must the status page be updated during a SEV1?",
+      "choices": ["Every 15 minutes", "Every 30 minutes", "Every 60 minutes", "Only when there is news"],
+      "answer_index": 1,
+      "source_quote": "Status page updates are due every 30 minutes during a SEV1 and every 60 minutes during a SEV2, even when there is nothing new to report.",
+      "explanation": "Every 30 minutes for a SEV1, even with nothing new; every 60 minutes for a SEV2."
+    },
+    {
+      "prompt": "Why is the Eastport replica only a last-resort failover target?",
+      "choices": ["It runs an older PostgreSQL version", "It can lose up to 60 seconds of writes", "It is read-only by design", "It is shared with the billing system"],
+      "answer_index": 1,
+      "source_quote": "Fail over to the Eastport replica only as a last resort, because it can lose up to 60 seconds of writes.",
+      "explanation": "The Eastport replica is asynchronous, so a cross-region failover can lose recent writes."
+    },
+    {
+      "prompt": "For how long are database backups kept?",
+      "choices": ["7 days", "30 days", "35 days", "400 days"],
+      "answer_index": 2,
+      "source_quote": "Backups are encrypted with AES-256 and kept for 35 days.",
+      "explanation": "Backups are kept 35 days. 30 days is the retention of application logs, a common mix-up."
+    },
+    {
+      "prompt": "Within how many business days is the written post-incident review due?",
+      "choices": ["2 business days", "5 business days", "10 business days", "30 days"],
+      "answer_index": 1,
+      "source_quote": "The written review is due within 5 business days, and the review meeting is held within 10 business days.",
+      "explanation": "The written review takes at most 5 business days; the meeting follows within 10."
+    }
+  ],
+  "wrong": [
+    {
+      "replaces": 6,
+      "expected_code": "number_mismatch",
+      "question": {
+        "prompt": "For how long are database backups kept?",
+        "choices": ["7 days", "30 days", "35 days", "400 days"],
+        "answer_index": 2,
+        "source_quote": "Backups are encrypted with AES-256 and kept for 90 days.",
+        "explanation": "Backups are kept 35 days."
+      }
+    },
+    {
+      "replaces": 7,
+      "expected_code": "quote_not_found",
+      "question": {
+        "prompt": "Within how many business days is the written post-incident review due?",
+        "choices": ["2 business days", "5 business days", "10 business days", "30 days"],
+        "answer_index": 1,
+        "source_quote": "Post-incident reviews must be written up and shared with leadership within one working week.",
+        "explanation": "The written review takes at most 5 business days."
+      }
+    }
+  ]
+}

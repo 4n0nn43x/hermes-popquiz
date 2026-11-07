@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Pop Quiz: projector</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="screen">
+<div class="backdrop" aria-hidden="true"></div>
+<header class="topbar">
+  <div class="brand"><img class="brand-mark" src="/static/icon.svg" alt=""><span>Pop Quiz</span></div>
+  <div id="doc-title" class="doc-title"></div>
+  <div id="progress" class="progress"></div>
+</header>
+
+<main>
+  <section id="v-connecting" class="view active">
+    <div class="center-msg"><div class="spinner" aria-hidden="true"></div><p>Connecting to the quiz...</p></div>
+  </section>
+
+  <section id="v-lobby" class="view">
+    <div class="lobby">
+      <div class="join-panel">
+        <p class="eyebrow">Join on your phone</p>
+        <p id="join-url" class="join-url"></p>
+        <p id="local-hint" class="local-hint hidden">Only this computer can reach this address: open to phones from the host page.</p>
+        <p class="eyebrow">Room code</p>
+        <p id="room-code" class="room-code"></p>
+      </div>
+      <div class="qr-panel">
+        <img id="qr" class="qr" alt="QR code to join the quiz">
+        <p id="qr-fallback" class="qr-fallback hidden">Type the address on your phone</p>
+      </div>
+    </div>
+    <div class="lobby-bottom">
+      <div class="players-count"><span id="player-count">0</span><span id="player-word"> players</span></div>
+      <div id="names" class="names" aria-live="polite"></div>
+    </div>
+    <div class="versus">
+      <span class="versus-room">The Room</span><span class="versus-vs">vs</span>
+      <div id="versus-bots" class="versus-bots"></div>
+    </div>
+  </section>
+
+  <section id="v-question" class="view">
+    <div class="q-head">
+      <p id="q-num" class="q-num"></p>
+      <div id="ring-slot"></div>
+    </div>
+    <h1 id="q-prompt" class="prompt"></h1>
+    <div id="q-choices" class="choices"></div>
+    <footer class="q-foot">
+      <div class="answered-box"><span id="answered-count" class="big-num">0</span><span id="answered-of" class="answered-label">answered</span></div>
+      <div id="bot-status" class="bot-status"></div>
+    </footer>
+  </section>
+
+  <section id="v-reveal" class="view">
+    <div class="reveal">
+      <div class="reveal-main">
+        <p id="r-num" class="q-num"></p>
+        <h2 id="r-prompt" class="prompt prompt-sm"></h2>
+        <div id="r-choices" class="choices choices-reveal"></div>
+      </div>
+      <aside class="reveal-side">
+        <figure class="quote">
+          <figcaption>From the document</figcaption>
+          <blockquote id="r-quote"></blockquote>
+          <p id="r-expl" class="explanation"></p>
+        </figure>
+        <div id="r-cards" class="cards"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="v-leaderboard" class="view">
+    <div class="board">
+      <div class="board-col">
+        <h2 class="section-title">Top players</h2>
+        <ol id="lb-top" class="top-list"></ol>
+      </div>
+      <div class="board-col">
+        <h2 class="section-title"><span class="accent-room">The Room</span> vs the models</h2>
+        <div id="race" class="race"></div>
+        <p id="lb-hint" class="hint"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-finished" class="view">
+    <div class="finale">
+      <p class="eyebrow">Final results</p>
+      <h1 id="f-headline" class="headline"></h1>
+      <div class="board">
+        <div class="board-col">
+          <h2 class="section-title">Podium</h2>
+          <ol id="f-top" class="top-list podium"></ol>
+        </div>
+        <div class="board-col">
+          <h2 class="section-title"><span class="accent-room">The Room</span> vs the models</h2>
+          <div id="f-race" class="race"></div>
+        </div>
+      </div>
+      <p id="f-report" class="hint"></p>
+    </div>
+  </section>
+</main>
+<div id="net-status" class="net-status hidden">Reconnecting...</div>
+<script type="module" src="/static/screen.js"></script>
+</body>
+</html>

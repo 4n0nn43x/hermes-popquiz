@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Pop Quiz: host</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="host">
+<div class="backdrop" aria-hidden="true"></div>
+<div class="wrap">
+  <div class="phone-top">
+    <div class="brand"><img class="brand-mark" src="/static/icon.svg" alt=""><span>Pop Quiz host</span></div>
+    <span id="state" class="host-state">connecting</span>
+  </div>
+  <div class="host-grid">
+    <div class="panel">
+      <h2>Room</h2>
+      <div id="room" class="host-room">------</div>
+      <p id="title" class="hero-sub"></p>
+      <div class="stats-row">
+        <div><div id="players" class="stat-big">0</div><div class="hero-sub">players</div></div>
+        <div><div id="question" class="stat-big">-</div><div class="hero-sub">question</div></div>
+        <div><div id="answered" class="stat-big">-</div><div class="hero-sub">answered</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Controls</h2>
+      <div class="controls">
+        <button id="b-lan" class="ctl lan" type="button">Open to phones</button>
+        <button id="b-start" class="ctl primary" type="button">Start</button>
+        <button id="b-next" class="ctl primary" type="button">Next</button>
+        <button id="b-end" class="ctl danger" type="button">End</button>
+      </div>
+      <p id="toast" class="toast" role="status"></p>
+    </div>
+    <div class="panel">
+      <h2>Links</h2>
+      <dl class="kv">
+        <dt>Phones</dt><dd id="join" class="mono"></dd>
+        <dt>Projector</dt><dd><a id="screen" class="mono" target="_blank" rel="noopener noreferrer"></a></dd>
+        <dt>Report</dt><dd><a id="report" class="mono" target="_blank" rel="noopener noreferrer"></a></dd>
+      </dl>
+    </div>
+    <div class="panel">
+      <h2>Cost</h2>
+      <dl class="kv">
+        <dt>Estimated</dt><dd id="est"></dd>
+        <dt>Spent</dt><dd id="spent"></dd>
+        <dt>Budget cap</dt><dd id="budget"></dd>
+      </dl>
+    </div>
+    <div class="panel">
+      <h2>Model players</h2>
+      <div id="bots" class="bot-rows"></div>
+    </div>
+    <div class="panel">
+      <h2>Scan to join</h2>
+      <img id="qr" class="host-qr hidden" alt="QR code to join">
+      <p class="hero-sub">Phones must be on the same network after "Open to phones".</p>
+    </div>
+  </div>
+</div>
+<script type="module" src="/static/host.js"></script>
+</body>
+</html>

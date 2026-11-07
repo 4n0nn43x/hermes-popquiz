@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#070912">
+<title>Pop Quiz: join</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="phone">
+<div class="backdrop" aria-hidden="true"></div>
+<div class="wrap">
+  <div class="phone-top"><div class="brand"><img class="brand-mark" src="/static/icon.svg" alt=""><span>Pop Quiz</span></div></div>
+  <h1 class="hero-title">Join the quiz</h1>
+  <p class="hero-sub">The room plays against AI models. No app, no account.</p>
+  <form id="join-form" class="form" autocomplete="off">
+    <label for="room">Room code</label>
+    <input id="room" class="input code" name="room" maxlength="8" inputmode="text" autocapitalize="characters" spellcheck="false" required>
+    <label for="nick">Your nickname</label>
+    <input id="nick" class="input" name="nick" maxlength="24" autocomplete="nickname" spellcheck="false" required>
+    <p id="err" class="err" role="alert"></p>
+    <button id="go" class="btn" type="submit">Join</button>
+  </form>
+</div>
+<script type="module" src="/static/join.js"></script>
+</body>
+</html>

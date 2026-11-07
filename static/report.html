@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Pop Quiz: report</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="report">
+<div class="backdrop" aria-hidden="true"></div>
+<div class="wrap">
+  <div class="phone-top"><div class="brand"><img class="brand-mark" src="/static/icon.svg" alt=""><span>Pop Quiz report</span></div></div>
+  <h1 id="title">Loading the report...</h1>
+  <p id="sub" class="hero-sub"></p>
+  <div id="summary" class="summary"></div>
+  <div class="panel">
+    <h2>The Room vs the models</h2>
+    <table class="models"><thead><tr><th>Player</th><th>Score</th><th>Correct</th><th>Median latency</th><th>Cost</th><th>Notes</th></tr></thead><tbody id="models"></tbody></table>
+  </div>
+  <div id="questions"></div>
+</div>
+<script type="module" src="/static/report.js"></script>
+</body>
+</html>

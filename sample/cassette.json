@@ -1,0 +1,582 @@
+{
+ "entries": {
+  "0c74567b6574559067c99cc282e3c38e84e7a3e13fdad3c682a344389f4eaa01": {
+   "choices": [
+    "2 business days",
+    "5 business days",
+    "10 business days",
+    "30 days"
+   ],
+   "error": null,
+   "latency_ms": 3610,
+   "mode": "open_book",
+   "model": "deepseek/deepseek-v4-flash",
+   "prompt": "Within how many business days is the written post-incident review due?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2423,
+    "model": "deepseek/deepseek-v4-flash",
+    "output_tokens": 9,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "17a0148907f7677f8d64dd910ebbd642f58de5db78047b242254ded74edffbb4": {
+   "choices": [
+    "7 days",
+    "30 days",
+    "35 days",
+    "400 days"
+   ],
+   "error": null,
+   "latency_ms": 990,
+   "mode": "open_book",
+   "model": "inception/mercury-3",
+   "prompt": "For how long are database backups kept?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2404,
+    "model": "inception/mercury-3",
+    "output_tokens": 11,
+    "parsed": {
+     "choice": "C"
+    },
+    "text": "{\"choice\": \"C\"}"
+   }
+  },
+  "18aff595a8ebf812130ee67bff70e8d7923555418d4dee4bd6fb4bc439023385": {
+   "choices": [
+    "2 business days",
+    "5 business days",
+    "10 business days",
+    "30 days"
+   ],
+   "error": null,
+   "latency_ms": 10120,
+   "mode": "open_book",
+   "model": "anthropic/claude-opus-5.5",
+   "prompt": "Within how many business days is the written post-incident review due?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2442,
+    "model": "anthropic/claude-opus-5.5",
+    "output_tokens": 497,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "1bc8a53690d30d92ff5701a10a785387632cb598385299e213fd9cc805bac9bf": {
+   "choices": [
+    "2 business days",
+    "5 business days",
+    "10 business days",
+    "30 days"
+   ],
+   "error": null,
+   "latency_ms": 1210,
+   "mode": "open_book",
+   "model": "inception/mercury-3",
+   "prompt": "Within how many business days is the written post-incident review due?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2418,
+    "model": "inception/mercury-3",
+    "output_tokens": 12,
+    "parsed": {
+     "choice": "C"
+    },
+    "text": "{\"choice\": \"C\"}"
+   }
+  },
+  "24a5b404f28563d4bd2e7a7f914cc46fc280479c3b2ad5d8b59d4fa87e4dcfee": {
+   "choices": [
+    "30 days",
+    "35 days",
+    "400 days",
+    "2 years"
+   ],
+   "error": null,
+   "latency_ms": 3870,
+   "mode": "open_book",
+   "model": "deepseek/deepseek-v4-flash",
+   "prompt": "How long are audit logs kept?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2406,
+    "model": "deepseek/deepseek-v4-flash",
+    "output_tokens": 9,
+    "parsed": {
+     "choice": "C"
+    },
+    "text": "{\"choice\": \"C\"}"
+   }
+  },
+  "26be26ef756f5f00374314c593075d4bdda1d22cfc8e09492179de4518f426a7": {
+   "choices": [
+    "It runs an older PostgreSQL version",
+    "It can lose up to 60 seconds of writes",
+    "It is read-only by design",
+    "It is shared with the billing system"
+   ],
+   "error": null,
+   "latency_ms": 4980,
+   "mode": "open_book",
+   "model": "deepseek/deepseek-v4-flash",
+   "prompt": "Why is the Eastport replica only a last-resort failover target?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2441,
+    "model": "deepseek/deepseek-v4-flash",
+    "output_tokens": 10,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "29dfa823d675be42d514043e82b82b1a9d775d1714c5e24ecdea8ce92a900394": {
+   "choices": [
+    "Every 15 minutes",
+    "Every 30 minutes",
+    "Every 60 minutes",
+    "Only when there is news"
+   ],
+   "error": null,
+   "latency_ms": 1340,
+   "mode": "open_book",
+   "model": "inception/mercury-3",
+   "prompt": "How often must the status page be updated during a SEV1?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2419,
+    "model": "inception/mercury-3",
+    "output_tokens": 11,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "2e65e3c1c0b0196486e7c974ce370da2da10886155874509c2e3617c857d37c1": {
+   "choices": [
+    "It runs an older PostgreSQL version",
+    "It can lose up to 60 seconds of writes",
+    "It is read-only by design",
+    "It is shared with the billing system"
+   ],
+   "error": null,
+   "latency_ms": 7680,
+   "mode": "open_book",
+   "model": "anthropic/claude-opus-5.5",
+   "prompt": "Why is the Eastport replica only a last-resort failover target?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2460,
+    "model": "anthropic/claude-opus-5.5",
+    "output_tokens": 371,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "2f7e9deb776d1bed71b58e8faeaad4417c13c4c7f49794d0f753d658fa0c7586": {
+   "choices": [
+    "5 seconds",
+    "60 seconds",
+    "120 seconds",
+    "300 seconds"
+   ],
+   "error": null,
+   "latency_ms": 720,
+   "mode": "open_book",
+   "model": "inception/mercury-3",
+   "prompt": "Above which PostgreSQL replication lag does the on-call engineer get paged?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2416,
+    "model": "inception/mercury-3",
+    "output_tokens": 12,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "3db429688486ac4d7873658c48e0477c6ac6708f329282ec9ce37568c068f282": {
+   "choices": [
+    "5 minutes",
+    "10 minutes",
+    "15 minutes",
+    "30 minutes"
+   ],
+   "error": null,
+   "latency_ms": 8420,
+   "mode": "open_book",
+   "model": "anthropic/claude-opus-5.5",
+   "prompt": "Within how many minutes must the primary on-call engineer acknowledge a page?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2440,
+    "model": "anthropic/claude-opus-5.5",
+    "output_tokens": 412,
+    "parsed": {
+     "choice": "A"
+    },
+    "text": "{\"choice\": \"A\"}"
+   }
+  },
+  "3e44744e5bec84b832e467720143d66bb13f933efd5d4841dc2734266e7d5fb5": {
+   "choices": [
+    "5 seconds",
+    "60 seconds",
+    "120 seconds",
+    "300 seconds"
+   ],
+   "error": null,
+   "latency_ms": 15240,
+   "mode": "open_book",
+   "model": "anthropic/claude-opus-5.5",
+   "prompt": "Above which PostgreSQL replication lag does the on-call engineer get paged?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2440,
+    "model": "anthropic/claude-opus-5.5",
+    "output_tokens": 702,
+    "parsed": {
+     "choice": "C"
+    },
+    "text": "{\"choice\": \"C\"}"
+   }
+  },
+  "4155b753aa3c5321520689811dd36cd30c6bbada2eb2e87e1d4997b08fda645a": {
+   "choices": [
+    "It runs an older PostgreSQL version",
+    "It can lose up to 60 seconds of writes",
+    "It is read-only by design",
+    "It is shared with the billing system"
+   ],
+   "error": null,
+   "latency_ms": 860,
+   "mode": "open_book",
+   "model": "inception/mercury-3",
+   "prompt": "Why is the Eastport replica only a last-resort failover target?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2436,
+    "model": "inception/mercury-3",
+    "output_tokens": 13,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "4d87b14c2499aad1074e3c0f7e570b1b2cf2167164f3ef58283ec846ffcfcf98": {
+   "choices": [
+    "30 days",
+    "35 days",
+    "400 days",
+    "2 years"
+   ],
+   "error": null,
+   "latency_ms": 910,
+   "mode": "open_book",
+   "model": "inception/mercury-3",
+   "prompt": "How long are audit logs kept?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2401,
+    "model": "inception/mercury-3",
+    "output_tokens": 14,
+    "parsed": {
+     "choice": "C"
+    },
+    "text": "{\"choice\": \"C\"}"
+   }
+  },
+  "518165793335c10521f60d06ff412d84e915a469c3302ddfc817706fd34eb8aa": {
+   "choices": [
+    "5 minutes",
+    "10 minutes",
+    "15 minutes",
+    "30 minutes"
+   ],
+   "error": null,
+   "latency_ms": 640,
+   "mode": "open_book",
+   "model": "inception/mercury-3",
+   "prompt": "Within how many minutes must the primary on-call engineer acknowledge a page?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2416,
+    "model": "inception/mercury-3",
+    "output_tokens": 11,
+    "parsed": {
+     "choice": "A"
+    },
+    "text": "{\"choice\": \"A\"}"
+   }
+  },
+  "8aeb529e8658f04f853d1308638690ecda5f43bbc1030ea79f5eb64b25f7abf3": {
+   "choices": [
+    "Every 15 minutes",
+    "Every 30 minutes",
+    "Every 60 minutes",
+    "Only when there is news"
+   ],
+   "error": null,
+   "latency_ms": 9310,
+   "mode": "open_book",
+   "model": "anthropic/claude-opus-5.5",
+   "prompt": "How often must the status page be updated during a SEV1?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2443,
+    "model": "anthropic/claude-opus-5.5",
+    "output_tokens": 455,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "9b2811c3dad0616ec93889292e270c8d0643205feb3c67a5929ac7a53209423b": {
+   "choices": [
+    "7 days",
+    "30 days",
+    "35 days",
+    "400 days"
+   ],
+   "error": null,
+   "latency_ms": 2140,
+   "mode": "open_book",
+   "model": "deepseek/deepseek-v4-flash",
+   "prompt": "For how long are database backups kept?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2409,
+    "model": "deepseek/deepseek-v4-flash",
+    "output_tokens": 9,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "a104e3afe64c06a3be9f4ab1d419c8ccc70f4353d3ba381a52a9810d8762851a": {
+   "choices": [
+    "Every 15 minutes",
+    "Every 30 minutes",
+    "Every 60 minutes",
+    "Only when there is news"
+   ],
+   "error": null,
+   "latency_ms": 3340,
+   "mode": "open_book",
+   "model": "deepseek/deepseek-v4-flash",
+   "prompt": "How often must the status page be updated during a SEV1?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2424,
+    "model": "deepseek/deepseek-v4-flash",
+    "output_tokens": 9,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "a1fbc76bc3ebf1e2c93ce8b48e791917b0f0b429e63f4133d29be979c2adac81": {
+   "choices": [
+    "Nobody, rollbacks are always allowed",
+    "The incident commander",
+    "The database owner on call",
+    "The communications lead"
+   ],
+   "error": null,
+   "latency_ms": 6930,
+   "mode": "open_book",
+   "model": "anthropic/claude-opus-5.5",
+   "prompt": "Who must approve a rollback that touches more than one service?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2453,
+    "model": "anthropic/claude-opus-5.5",
+    "output_tokens": 318,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "a5a27c33052d17ff386fa9a85e3b6ee27de01bf298cae9d6c99c7d5e84ee9517": {
+   "choices": [
+    "Nobody, rollbacks are always allowed",
+    "The incident commander",
+    "The database owner on call",
+    "The communications lead"
+   ],
+   "error": null,
+   "latency_ms": 1180,
+   "mode": "open_book",
+   "model": "inception/mercury-3",
+   "prompt": "Who must approve a rollback that touches more than one service?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2429,
+    "model": "inception/mercury-3",
+    "output_tokens": 11,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "a785294167cafc12a82fd783b3c27e003cff59c938e279127802c2a86f18a560": {
+   "choices": [
+    "30 days",
+    "35 days",
+    "400 days",
+    "2 years"
+   ],
+   "error": null,
+   "latency_ms": 11870,
+   "mode": "open_book",
+   "model": "anthropic/claude-opus-5.5",
+   "prompt": "How long are audit logs kept?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2425,
+    "model": "anthropic/claude-opus-5.5",
+    "output_tokens": 586,
+    "parsed": {
+     "choice": "C"
+    },
+    "text": "{\"choice\": \"C\"}"
+   }
+  },
+  "ac1d100ad4fec8b62a6d1fa03c750988fbd67c3959c5bd9351a0b828b80e3093": {
+   "choices": [
+    "7 days",
+    "30 days",
+    "35 days",
+    "400 days"
+   ],
+   "error": null,
+   "latency_ms": 13550,
+   "mode": "open_book",
+   "model": "anthropic/claude-opus-5.5",
+   "prompt": "For how long are database backups kept?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2428,
+    "model": "anthropic/claude-opus-5.5",
+    "output_tokens": 640,
+    "parsed": {
+     "choice": "B"
+    },
+    "text": "{\"choice\": \"B\"}"
+   }
+  },
+  "b13e32fbe70152f06f0c7752be8d75e94ffc880216ff412452a46efbdc5023d1": {
+   "choices": [
+    "5 seconds",
+    "60 seconds",
+    "120 seconds",
+    "300 seconds"
+   ],
+   "error": null,
+   "latency_ms": 2950,
+   "mode": "open_book",
+   "model": "deepseek/deepseek-v4-flash",
+   "prompt": "Above which PostgreSQL replication lag does the on-call engineer get paged?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2421,
+    "model": "deepseek/deepseek-v4-flash",
+    "output_tokens": 9,
+    "parsed": {
+     "choice": "C"
+    },
+    "text": "{\"choice\": \"C\"}"
+   }
+  },
+  "c48f4ea5c6be7990aab3cec995a228d7e47ab5e68a877991db76d9ebcfc5bdb8": {
+   "choices": [
+    "Nobody, rollbacks are always allowed",
+    "The incident commander",
+    "The database owner on call",
+    "The communications lead"
+   ],
+   "error": null,
+   "latency_ms": 4620,
+   "mode": "open_book",
+   "model": "deepseek/deepseek-v4-flash",
+   "prompt": "Who must approve a rollback that touches more than one service?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2434,
+    "model": "deepseek/deepseek-v4-flash",
+    "output_tokens": 12,
+    "parsed": {
+     "choice": "C"
+    },
+    "text": "{\"choice\": \"C\"}"
+   }
+  },
+  "fa63ca4ce1bb32d52a3a1c9da88fddeef748ff265bc8ecfbafd6e4939bc58f8a": {
+   "choices": [
+    "5 minutes",
+    "10 minutes",
+    "15 minutes",
+    "30 minutes"
+   ],
+   "error": null,
+   "latency_ms": 2310,
+   "mode": "open_book",
+   "model": "deepseek/deepseek-v4-flash",
+   "prompt": "Within how many minutes must the primary on-call engineer acknowledge a page?",
+   "reply": {
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "input_tokens": 2421,
+    "model": "deepseek/deepseek-v4-flash",
+    "output_tokens": 9,
+    "parsed": {
+     "choice": "A"
+    },
+    "text": "{\"choice\": \"A\"}"
+   }
+  }
+ },
+ "note": "Sample replies for the 3 default models on sample/questions.json (open book). Hand-written, realistic latencies (Mercury under 1.5 s, DeepSeek 2 to 5 s, Opus 6 to 16 s); Opus wrong on Q7, DeepSeek wrong on Q3 and Q7, Mercury wrong on Q4 and Q8. Not a recording of real calls.",
+ "version": 1
+}

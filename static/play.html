@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#070912">
+<title>Pop Quiz: play</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="phone">
+<div class="backdrop" aria-hidden="true"></div>
+<div id="banner" class="banner hidden">Reconnecting...</div>
+<div class="wrap">
+  <div class="phone-top">
+    <div class="brand"><img class="brand-mark" src="/static/icon.svg" alt=""><span>Pop Quiz</span></div>
+    <div id="me" class="me"></div>
+  </div>
+
+  <section id="v-connecting" class="view active">
+    <div class="wait"><div class="spinner" aria-hidden="true"></div><p>Connecting...</p></div>
+  </section>
+
+  <section id="v-lobby" class="view">
+    <div class="wait">
+      <p>You are in!</p>
+      <p id="lobby-nick" class="big"></p>
+      <p>Look at the big screen. The quiz starts soon.</p>
+      <p id="lobby-count"></p>
+    </div>
+  </section>
+
+  <section id="v-question" class="view">
+    <div class="pq">
+      <div class="pq-head"><span id="pq-num" class="q-num"></span><div id="pq-ring"></div></div>
+      <p id="pq-prompt" class="pq-prompt"></p>
+      <div id="pad" class="pad"></div>
+      <p id="lock-note" class="lock-note" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section id="v-result" class="view">
+    <div id="result" class="result">
+      <div id="res-icon" class="big-icon"></div>
+      <p id="res-verdict" class="verdict"></p>
+      <p id="res-points" class="points"></p>
+      <p id="res-detail" class="detail"></p>
+    </div>
+  </section>
+
+  <section id="v-rank" class="view">
+    <div class="rank-card">
+      <p id="rank-title" class="hero-sub">Your rank</p>
+      <p id="rank" class="rank"></p>
+      <p id="rank-of" class="of"></p>
+      <p id="rank-score" class="score"></p>
+      <p id="rank-note" class="hero-sub"></p>
+    </div>
+  </section>
+
+  <section id="v-error" class="view">
+    <div class="wait">
+      <p id="err-title" class="big">Oops</p>
+      <p id="err-text"></p>
+      <p><a id="err-link" href="/">Back to the join page</a></p>
+    </div>
+  </section>
+</div>
+<script type="module" src="/static/play.js"></script>
+</body>
+</html>
