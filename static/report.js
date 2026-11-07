@@ -1,5 +1,5 @@
 // Post-game report page (public data only, available once the game is finished).
-import { $, el, clear, shape, fmtCost, fmtLatency, roomFromUrl, LETTERS } from "./common.js";
+import { $, el, clear, key, fmtCost, fmtLatency, roomFromUrl, LETTERS } from "./common.js";
 
 const room = roomFromUrl();
 
@@ -48,8 +48,8 @@ function render(d) {
       const track = el("div", "track");
       const fill = el("div", "fill");
       fill.style.setProperty("--w", `${Math.round((100 * (q.distribution[i] || 0)) / max)}%`);
-      track.append(fill, el("span", "lbl", `${LETTERS[i]}. ${c}`));
-      row.append(shape(i), track, el("span", "", String(q.distribution[i] || 0)));
+      track.append(fill, el("span", "lbl", c));
+      row.append(key(i), track, el("span", "", String(q.distribution[i] || 0)));
       card.appendChild(row);
     });
     if (q.trap && q.trap.count) card.appendChild(el("p", "hero-sub", `Most common wrong answer: ${LETTERS[q.trap.choice]}. ${q.choices[q.trap.choice]}`));

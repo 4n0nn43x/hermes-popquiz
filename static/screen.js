@@ -1,5 +1,5 @@
 // Projector view: lobby, question, reveal, leaderboard, finale. Read-only.
-import { $, el, clear, show, shape, icon, makeRing, msLeft, fmtCost, fmtLatency, roomFromUrl, Live, countTo, LETTERS } from "./common.js";
+import { $, el, clear, show, key, icon, makeRing, msLeft, fmtCost, fmtLatency, roomFromUrl, Live, countTo } from "./common.js";
 
 const S = { room: roomFromUrl(), bots: [], total: 0, names: new Set(), q: -1, question: null, joinUrl: "" };
 const ring = makeRing("ring ring-xl");
@@ -23,8 +23,10 @@ function onRoom(m) {
   $("#doc-title").textContent = m.title || "";
   $("#room-code").textContent = m.room || "";
   $("#join-url").textContent = m.join_display || m.join_url || "";
-  const loopbackOnly = /^https?:\/\/(127\.|localhost|\[::1\])/.test(m.join_url || "");
-  $("#local-hint").classList.toggle("hidden", !loopbackOnly);
+  // Until the host opens the room to the LAN, the join URL (and so the QR) is loopback only.
+  const local = !m.lan;
+  $("#local-hint").classList.toggle("hidden", !local);
+  $("#qr-panel").classList.toggle("local", local);
   const qr = $("#qr");
   if (m.qr) {
     qr.classList.remove("hidden");
@@ -64,9 +66,7 @@ function onLobby(m) {
 
 function choiceTile(i, text, extraCls) {
   const tile = el("div", `choice c${i} ${extraCls || ""}`);
-  const badge = el("span", "choice-badge");
-  badge.appendChild(shape(i));
-  tile.append(badge, el("span", "choice-text", text));
+  tile.append(key(i), el("span", "choice-text", text));
   return tile;
 }
 
@@ -130,10 +130,7 @@ function card({ cls, label, choice, correct, latency, cost, flag, sub }) {
   head.appendChild(mark);
   const body = el("div", "card-body");
   if (choice !== null && choice !== undefined) {
-    const pick = el("span", `card-pick c${choice}`);
-    pick.appendChild(shape(choice, "shape shape-sm"));
-    pick.append(el("span", "", LETTERS[choice] || "?"));
-    body.appendChild(pick);
+    body.appendChild(key(choice));
   } else {
     body.appendChild(el("span", "card-pick none", "no answer"));
   }

@@ -1,7 +1,6 @@
 // Shared helpers for every Pop Quiz page. No inline script, no CDN, text only via textContent.
 
 export const LETTERS = ["A", "B", "C", "D"];
-export const SHAPE_NAMES = ["triangle", "diamond", "circle", "square"];
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 export function $(sel, root = document) {
@@ -30,15 +29,12 @@ function svgEl(name, attrs) {
   return node;
 }
 
-// Shape icon for answer i (triangle, diamond, circle, square), for colour-blind players.
-export function shape(i, cls = "shape") {
-  const svg = svgEl("svg", { viewBox: "0 0 100 100", class: cls, "aria-hidden": "true", focusable: "false" });
-  const kind = SHAPE_NAMES[i % 4];
-  if (kind === "triangle") svg.appendChild(svgEl("path", { d: "M50 9 L93 86 L7 86 Z" }));
-  else if (kind === "diamond") svg.appendChild(svgEl("path", { d: "M50 5 L95 50 L50 95 L5 50 Z" }));
-  else if (kind === "circle") svg.appendChild(svgEl("circle", { cx: 50, cy: 50, r: 43 }));
-  else svg.appendChild(svgEl("rect", { x: 10, y: 10, width: 80, height: 80, rx: 8 }));
-  return svg;
+// Answer key for option i: a keycap carrying its letter. The letter, not the hue, is the meaning,
+// so colour-blind players and the models' badges read the same thing ("C"), on every screen.
+export function key(i, cls = "") {
+  const node = el("span", `key c${i} ${cls}`.trim(), LETTERS[i] || "?");
+  node.setAttribute("aria-hidden", "true");
+  return node;
 }
 
 export function icon(kind, cls = "icon") {

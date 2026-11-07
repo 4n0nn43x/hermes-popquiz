@@ -1,5 +1,5 @@
 // Phone player: join or resume with the stored token, big answer buttons, feedback, rank.
-import { $, el, clear, show, shape, icon, makeRing, msLeft, roomFromUrl, store, Live, LETTERS } from "./common.js";
+import { $, el, clear, show, key, icon, makeRing, msLeft, roomFromUrl, store, Live, LETTERS } from "./common.js";
 
 const params = new URLSearchParams(location.search);
 const room = roomFromUrl();
@@ -30,12 +30,11 @@ function onQuestion(m) {
   $("#pq-prompt").textContent = m.prompt || "";
   const pad = clear($("#pad"));
   pad.classList.remove("locked");
-  pad.classList.toggle("two", S.choices.length <= 2);
   S.choices.forEach((text, i) => {
     const b = el("button", `pad-btn c${i}`);
     b.type = "button";
     b.setAttribute("aria-label", `${LETTERS[i]}: ${text}`);
-    b.append(shape(i), el("span", "", text));
+    b.append(key(i), el("span", "pad-text", text));
     b.addEventListener("click", () => answer(i));
     pad.appendChild(b);
   });
@@ -74,9 +73,13 @@ function onReveal(m) {
   $("#res-verdict").textContent = !answered ? "No answer" : you.correct ? "Correct!" : "Not quite";
   $("#res-points").textContent = you.correct ? `+${you.points || 0}` : "";
   const right = (m.choices || S.choices)[m.answer_index];
+  const ans = clear($("#res-answer"));
+  if (right) ans.append(key(m.answer_index), el("span", "", right));
   const room = m.room || {};
-  const roomLine = room.choice === null || room.choice === undefined ? "" : room.correct ? " The Room got it right." : " The Room got it wrong.";
-  $("#res-detail").textContent = (right ? `Answer: ${LETTERS[m.answer_index]}. ${right}.` : "") + roomLine;
+  const lines = [];
+  if (answered && !you.correct) lines.push(`You picked ${LETTERS[you.choice] || "?"}.`);
+  if (room.choice !== null && room.choice !== undefined) lines.push(room.correct ? "The Room got it right." : "The Room got it wrong.");
+  $("#res-detail").textContent = lines.join(" ");
   show("v-result");
 }
 
