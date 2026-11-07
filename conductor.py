@@ -6,6 +6,11 @@ wait a short grace for slow bots, broadcast `reveal` (bot results included even 
 `reveal_s` broadcast `leaderboard`, then wait for the host's `next` (or auto-advance after 6 s).
 Bot answers stay server-side until the reveal: clients only learn which bots are done.
 
+Budget: before each question the estimated cost of every call is checked against the budget left
+(`game.plan_bots`). A launched call is billed even if we stop waiting, so when its real cost is unknown
+(timeout, cancelled at the deadline or at `end`, exception, reply without token counts) it is booked at
+its estimate with `meta["cost_estimated"] = True`; a reply with token counts is booked at its real cost.
+
 The conductor talks to the transport through a small hub interface (implemented by `QuizServer`):
 `await hub.broadcast(msg, personal=None)`, `hub.mark_dirty(kind)`, `hub._notify(event)`,
 `hub.on_finished()`. Tests pass a fake hub.
@@ -58,6 +63,7 @@ class Conductor:
         self._bot_tasks: dict[str, asyncio.Task] = {}
         self._stopped_bots: set[str] = set()
         self._last_cost: dict[str, float] = {}
+        self._reserved: dict[str, float] = {}  # estimate of each call launched for the current question
         self.phase = "lobby"
         self.report = None
         self._report_data: dict | None = None
@@ -93,6 +99,8 @@ class Conductor:
             return
         await self._cancel_task()
         await self._cancel_bots()
+        if self.game.current >= 0:
+            self._book_unanswered(self.game.current, 0)
         self.game.end()
         await self._finish()
 
@@ -180,13 +188,7 @@ class Conductor:
         if pending:
             await asyncio.wait(pending, timeout=self.bot_grace_s)
             await self._cancel_bots()
-            for spec in self.bots:
-                if not self._has_answer(qi, spec.id):
-                    try:
-                        g.submit_bot_answer(spec.id, qi, None, int(question.time_limit_s * 1000) + 1000,
-                                            {"error": "timeout", "cost_usd": 0.0})
-                    except Exception:
-                        pass
+            self._book_unanswered(qi, int(question.time_limit_s * 1000) + 1000)
         self.phase = "reveal"
         reveal = self.reveal_msg(qi)
         await self.hub.broadcast(reveal, personal=lambda pid: self._reveal_personal(pid, qi))
@@ -255,6 +257,7 @@ class Conductor:
                     pass
         timeout = max(1.0, (g.question_deadline or self.clock()) - self.clock())
         loop = asyncio.get_running_loop()
+        self._reserved = {spec.id: estimates.get(spec.id, 0.0) for spec in to_call}
         for spec in to_call:
             self._bot_tasks[spec.id] = loop.create_task(self._run_bot(spec, qi, question, timeout))
 
@@ -266,12 +269,28 @@ class Conductor:
                                                      "error": r.error}
         if r.cost_usd:
             self._last_cost[spec.id] = float(r.cost_usd)
+        if not (r.input_tokens or r.output_tokens) and r.error != "trust_denied":
+            meta = self._estimated(meta, spec.id)  # called but no usage known: book the estimate
         try:
             self.game.submit_bot_answer(spec.id, qi, r.choice, r.latency_ms, meta)
         except Exception as exc:
             log.debug("bot answer refused: %s", exc)
         self.hub.mark_dirty("answered")
         self._wake.set()
+
+    def _estimated(self, meta: dict, bot_id: str) -> dict:
+        est = self._reserved.get(bot_id, 0.0)
+        return {**meta, "cost_usd": est, "cost_estimated": est > 0}
+
+    def _book_unanswered(self, qi: int, latency_ms: int) -> None:
+        """Calls launched for question qi that never answered (cancelled) are booked at their estimate."""
+        for bot_id in self._bot_tasks:
+            if not self._has_answer(qi, bot_id):
+                try:
+                    self.game.submit_bot_answer(bot_id, qi, None, latency_ms,
+                                                self._estimated({"error": "timeout"}, bot_id))
+                except Exception:
+                    pass
 
     def _has_answer(self, qi: int, actor_id: str) -> bool:
         return any(a.actor_id == actor_id for a in self.game.answers.get(qi, []))
@@ -415,6 +434,7 @@ class Conductor:
                 bots_rows.append({"id": b.id, "label": b.label, "choice": a.choice if a else None,
                                   "correct": bool(a and a.correct), "latency_ms": a.latency_ms if a else None,
                                   "cost_usd": float(a.meta.get("cost_usd") or 0.0) if a else 0.0,
+                                  "cost_estimated": bool(a and a.meta.get("cost_estimated")),
                                   "error": a.meta.get("error") if a else None})
             questions.append({
                 "q": qi, "prompt": q.prompt, "choices": list(q.choices), "answer_index": q.answer_index,

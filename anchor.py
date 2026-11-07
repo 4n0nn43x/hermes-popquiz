@@ -16,6 +16,8 @@ Choices made where the SPEC is silent:
   A fuzzy score is capped at 0.999: 1.0 always means an exact match.
 - ``prompt_leaks_answer``: the normalized correct choice appears word bounded in the prompt while at
   least one wrong choice does not (a prompt listing every choice leaks nothing).
+- ``quote_too_long``: a normalized quote over ``MAX_QUOTE`` chars is refused before any matching, which
+  bounds the fuzzy search (difflib is quadratic in the quote length).
 - ``validate_questions`` keeps the raw position as ``Question.index``; the caller renumbers (the
   engine does). Optional ``explanation`` (cut to 300 chars) and ``time_limit_s`` (5..120) are read.
 """
@@ -30,6 +32,7 @@ from dataclasses import dataclass, field
 from .model import Question
 
 MIN_QUOTE = 12
+MAX_QUOTE = 400  # the question skill asks for 12 to 300 chars; this is the hard cap
 THRESHOLD = 0.90
 CLOSEST_MAX = 160
 MAX_PROMPT = 240
@@ -84,6 +87,8 @@ def _has_numbers(numbers: list[str], window: str) -> bool:
 
 
 def _seed_positions(words: list[str], doc_norm: str) -> list[int]:
+    # ponytail: one regex scan of the document per quote word (MAX_QUOTE bounds it: about 0.5 s per
+    # adversarial quote on a 400k char document); count the document words once if that matters.
     counts: dict[str, int] = {}
     for w in set(words):
         if len(w) < 3:
@@ -105,6 +110,8 @@ def anchor(quote: str, doc_norm: str) -> AnchorResult:
     q = normalize(quote)
     if len(q) < MIN_QUOTE:
         return AnchorResult(False, 0.0, "quote_too_short", -1, "")
+    if len(q) > MAX_QUOTE:
+        return AnchorResult(False, 0.0, "quote_too_long", -1, "")
     pos = doc_norm.find(q)
     if pos >= 0:
         return AnchorResult(True, 1.0, None, pos, "")
@@ -206,13 +213,14 @@ def validate_questions(raw: list[dict], doc_text: str) -> Validation:
         if not res.ok:
             detail = {
                 "quote_too_short": f"source_quote must be at least {MIN_QUOTE} characters after normalization",
+                "quote_too_long": f"source_quote must be at most {MAX_QUOTE} characters after normalization",
                 "number_mismatch": "a number in source_quote is not in the matching document passage",
                 "quote_not_found": "source_quote was not found verbatim in the document",
             }[res.code or "quote_not_found"]
             if res.code == "number_mismatch":
                 missing = [n for n in _numbers(normalize(item["source_quote"])) if not _has_numbers([n], res.closest)]
                 detail += f" (missing: {', '.join(missing)})" if missing else ""
-            score = res.score if res.code != "quote_too_short" else None
+            score = res.score if res.code not in ("quote_too_short", "quote_too_long") else None
             out.rejected.append(_reject(i, res.code or "quote_not_found", detail, score, res.closest or None))
             continue
         quote_norm = normalize(item["source_quote"])

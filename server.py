@@ -10,6 +10,14 @@ IPv4 only after `open_lan`, host access needs the host token AND a loopback peer
 every player action, CSP and friends on every response, 2 KB WebSocket messages, 200 players,
 5 messages/s per connection, 10 joins per minute per IP, Origin checked on state-changing messages,
 automatic stop 10 minutes after the game ends. aiohttp and segno are imported lazily.
+
+Hardening after review: every response checks the Host header (loopback names, the LAN IP served, the
+`public_url` host) against DNS rebinding; loopback joins skip the join limit only without `public_url`
+(a tunnel delivers every player from loopback). Each connection has a bounded outbox drained by its
+own writer task, so no broadcast ever waits for one client; a client too slow to keep up is dropped
+and can resume with its token. A socket must pick a role within ROLE_TIMEOUT_S; non loopback IPs have
+MAX_CONNS_PER_IP sockets; HOST_SLOTS loopback slots above MAX_CONNECTIONS only accept `host_auth`, and
+a newcomer on a full server evicts the oldest socket without a role.
 """
 
 from __future__ import annotations
@@ -44,6 +52,11 @@ ROOM_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I/L
 MAX_MSG_BYTES = 2048
 MAX_PLAYERS = 200
 MAX_CONNECTIONS = 400
+MAX_CONNS_PER_IP = 20  # non loopback peers; a tunnel (public_url) arrives from loopback
+HOST_SLOTS = 4  # loopback slots above MAX_CONNECTIONS, usable only by the host console
+ROLE_TIMEOUT_S = 10.0  # a socket must send join, resume, screen or host_auth within this delay
+OUTBOX_MAX = 64  # queued messages per connection before a slow client is dropped
+CLOSE_TIMEOUT_S = 1.0
 MSG_RATE_PER_S = 5.0
 MSG_BURST = 5.0
 JOINS_PER_MIN = 10
@@ -69,9 +82,11 @@ def _state_name(state: Any) -> str:
 class _Conn:
     """One WebSocket connection and its limits."""
 
-    __slots__ = ("ws", "ip", "origin", "host_hdr", "role", "player_id", "allowance", "last", "drops", "auth_fail")
+    __slots__ = ("ws", "ip", "origin", "host_hdr", "role", "player_id", "allowance", "last", "drops", "auth_fail",
+                 "transport", "spare", "opened", "outbox", "writer")
 
-    def __init__(self, ws, ip: str, origin: str | None, host_hdr: str, now: float):
+    def __init__(self, ws, ip: str, origin: str | None, host_hdr: str, now: float, transport=None,
+                 spare: bool = False):
         self.ws = ws
         self.ip = ip
         self.origin = origin
@@ -82,6 +97,16 @@ class _Conn:
         self.last = now
         self.drops = 0
         self.auth_fail = 0
+        self.transport = transport
+        self.spare = spare  # admitted on a host slot: may only authenticate as host
+        self.opened = now
+        self.outbox: asyncio.Queue = asyncio.Queue(OUTBOX_MAX)
+        self.writer: asyncio.Task | None = None
+
+    def drop(self) -> None:
+        """Abort the TCP connection without waiting for the client (its reader loop then ends)."""
+        if self.transport is not None:
+            self.transport.abort()  # also after a close() stuck flushing to a client that never reads
 
     def allow(self, now: float) -> bool:
         self.allowance = min(MSG_BURST, self.allowance + (now - self.last) * MSG_RATE_PER_S)
@@ -102,6 +127,8 @@ class QuizServer:
         self.pricing = pricing
         self.on_event = on_event
         self.public_url = (public_url or "").strip().rstrip("/") or None
+        pub = self.public_url or ""
+        self._public_host = urlsplit(pub if "//" in pub else "//" + pub).hostname if pub else None
         self.idle_shutdown_s = idle_shutdown_s
         self.trust_loopback_joins = trust_loopback_joins
         self.clock = clock
@@ -126,6 +153,7 @@ class QuizServer:
         self._dirty: set[str] = set()
         self._idle_handle: asyncio.TimerHandle | None = None
         self._last_lobby: tuple | None = None
+        self._bg_tasks: set[asyncio.Task] = set()
 
     # ------------------------------------------------------------------ lifecycle (any thread)
 
@@ -210,11 +238,7 @@ class QuizServer:
             flusher.cancel()
             if self._conductor is not None:
                 await self._conductor.shutdown()
-            for conn in list(self._conns):
-                try:
-                    await conn.ws.close(code=1001, message=b"server stopping")
-                except Exception:
-                    pass
+            await asyncio.gather(*(self._close(c) for c in list(self._conns)), return_exceptions=True)
             await self._cleanup()
             self._notify({"t": "stopped"})
 
@@ -274,7 +298,9 @@ class QuizServer:
     def host_command(self, cmd: str) -> dict:
         if self._thread is not None and threading.current_thread() is self._thread:
             # Called from on_event (server thread): schedule instead of blocking our own loop.
-            asyncio.ensure_future(self._host_command(cmd))
+            task = asyncio.ensure_future(self._host_command(cmd))
+            self._bg_tasks.add(task)
+            task.add_done_callback(self._bg_tasks.discard)
             return {"scheduled": True, **self._status_sync()}
         return self._call(self._host_command(cmd), timeout=15.0)
 
@@ -335,6 +361,16 @@ class QuizServer:
         parts = urlsplit(origin)
         return parts.scheme in ("http", "https") and bool(host_hdr) and parts.netloc.lower() == host_hdr.lower()
 
+    def _host_ok(self, host_hdr: str | None) -> bool:
+        """DNS rebinding guard: the Host header must name this server (no header: non-browser client)."""
+        if host_hdr is None:
+            return True
+        try:
+            name = urlsplit("//" + host_hdr).hostname or ""
+        except ValueError:
+            return False
+        return bool(name) and name in {"localhost", "127.0.0.1", "::1", self.host, self._lan_ip, self._public_host}
+
     def _notify(self, event: dict) -> None:
         self._dirty.add("host")
         cb = self.on_event
@@ -363,6 +399,8 @@ class QuizServer:
 
         @web.middleware
         async def mw(request, handler):
+            if not self._host_ok(request.headers.get("Host")):
+                return web.Response(status=421, text="unknown host")
             try:
                 return await handler(request)
             except web.HTTPException:
@@ -459,14 +497,25 @@ class QuizServer:
     async def _ws(self, request):
         from aiohttp import WSMsgType, web
 
-        if len(self._conns) >= MAX_CONNECTIONS:
+        ip = self._peer_ip(request)
+        spare = self._admit(ip)
+        if spare is None:
             raise web.HTTPServiceUnavailable()
         ws = web.WebSocketResponse(max_msg_size=MAX_MSG_BYTES, heartbeat=25.0)
-        await ws.prepare(request)
-        conn = _Conn(ws, self._peer_ip(request), request.headers.get("Origin"), request.host, self.clock())
-        self._conns.add(conn)
+        conn = _Conn(ws, ip, request.headers.get("Origin"), request.host, self.clock(), request.transport, spare)
+        self._conns.add(conn)  # counted before the handshake awaits, so the limits stay exact
+        loop = asyncio.get_running_loop()
+        deadline: float | None = loop.time() + ROLE_TIMEOUT_S
         try:
-            async for msg in ws:
+            await ws.prepare(request)
+            conn.writer = asyncio.create_task(self._write_loop(conn))
+            while True:
+                if conn.role is not None:
+                    deadline = None  # once a role was chosen the socket may stay idle (phones, screens)
+                try:
+                    msg = await ws.receive(timeout=None if deadline is None else max(0.01, deadline - loop.time()))
+                except TimeoutError:
+                    break  # no role in time: free the slot
                 if msg.type == WSMsgType.TEXT:
                     await self._on_text(conn, msg.data)
                 elif msg.type == WSMsgType.BINARY:
@@ -474,6 +523,8 @@ class QuizServer:
                 else:
                     break
         finally:
+            if conn.writer is not None:
+                conn.writer.cancel()
             self._conns.discard(conn)
             pid = conn.player_id
             g = self._game
@@ -487,18 +538,48 @@ class QuizServer:
                     self._conductor.wake()
         return ws
 
+    def _admit(self, ip: str) -> bool | None:
+        """Connection limits. None: refuse; True: admitted on a host slot; False: regular slot."""
+        local = net.is_loopback(ip)
+        if not local and sum(1 for c in self._conns if c.ip == ip) >= MAX_CONNS_PER_IP:
+            return None
+        if len(self._conns) >= MAX_CONNECTIONS + (HOST_SLOTS if local else 0):
+            idle = min((c for c in self._conns if c.role is None), key=lambda c: c.opened, default=None)
+            if idle is None:
+                return None
+            self._conns.discard(idle)  # its handler finishes the cleanup
+            idle.drop()
+        return len(self._conns) >= MAX_CONNECTIONS
+
     async def _send(self, conn: _Conn, msg: dict | str) -> None:
+        """Queue a message for this connection. Never waits for the client: a full outbox drops it."""
         data = msg if isinstance(msg, str) else json.dumps(msg, separators=(",", ":"))
         try:
-            await conn.ws.send_str(data)
+            conn.outbox.put_nowait(data)
+        except asyncio.QueueFull:
+            log.info("popquiz dropping a client that does not read (%s)", conn.ip)
+            conn.drop()
+
+    async def _write_loop(self, conn: _Conn) -> None:
+        try:
+            while True:
+                await conn.ws.send_str(await conn.outbox.get())
+        except asyncio.CancelledError:
+            raise
         except Exception:
-            pass
+            if not conn.ws.closed:  # a broken transport; a normal close needs nothing more
+                conn.drop()
+
+    async def _close(self, conn: _Conn) -> None:
+        try:
+            await asyncio.wait_for(conn.ws.close(code=1001, message=b"server stopping"), CLOSE_TIMEOUT_S)
+        except Exception:
+            conn.drop()
 
     async def broadcast(self, msg: dict, personal: Callable[[str], dict | None] | None = None,
                         roles: tuple[str, ...] = ("player", "screen", "host")) -> None:
         """Send `msg` to every connection with a role; players get `you` from `personal(player_id)`."""
         base = json.dumps(msg, separators=(",", ":"))
-        sends = []
         for conn in list(self._conns):
             if conn.role not in roles:
                 continue
@@ -507,9 +588,7 @@ class QuizServer:
                 you = personal(conn.player_id)
                 if you is not None:
                     data = json.dumps({**msg, "you": you}, separators=(",", ":"))
-            sends.append(self._send(conn, data))
-        if sends:
-            await asyncio.gather(*sends, return_exceptions=True)
+            await self._send(conn, data)  # only queues: never waits for this client
 
     async def _on_text(self, conn: _Conn, data: str) -> None:
         if not conn.allow(self.clock()):
@@ -558,7 +637,7 @@ class QuizServer:
         return g
 
     def _join_allowed(self, ip: str) -> bool:
-        if self.trust_loopback_joins and net.is_loopback(ip):
+        if self.trust_loopback_joins and not self.public_url and net.is_loopback(ip):
             return True
         now = self.clock()
         dq = self._join_log.setdefault(ip, deque())
@@ -575,6 +654,8 @@ class QuizServer:
         g = self._check_room(msg)
         if conn.player_id:
             raise _game_error("already_joined")
+        if conn.spare:
+            raise _game_error("server_full")
         if not self._join_allowed(conn.ip):
             raise _game_error("rate_limited")
         nickname = msg.get("nickname")
@@ -591,6 +672,10 @@ class QuizServer:
         if not self._origin_ok(conn.origin, conn.host_hdr):
             raise _game_error("bad_origin")
         g = self._check_room(msg)
+        if conn.player_id:
+            raise _game_error("already_joined")
+        if conn.spare:
+            raise _game_error("server_full")
         token = msg.get("token")
         if not isinstance(token, str) or not token or len(token) > 128:
             raise _game_error("bad_token")
@@ -619,7 +704,11 @@ class QuizServer:
             self._conductor.wake()
 
     async def _m_screen(self, conn, msg):
+        if not self._origin_ok(conn.origin, conn.host_hdr, allow_null=True):
+            raise _game_error("bad_origin")
         self._check_room(msg, required=False)
+        if conn.spare:
+            raise _game_error("server_full")
         conn.role = "screen"
         await self._snapshot(conn)
 

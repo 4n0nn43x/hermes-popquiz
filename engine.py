@@ -384,10 +384,11 @@ class Game:
         a = self._find(q, bot.id)
         if a is None:
             return {"id": bot.id, "label": bot.label, "choice": None, "correct": False, "latency_ms": None,
-                    "cost_usd": 0.0, "error": None, "pending": True, "late": False}
+                    "cost_usd": 0.0, "cost_estimated": False, "error": None, "pending": True, "late": False}
         return {
             "id": bot.id, "label": bot.label, "choice": a.choice, "correct": a.correct,
             "latency_ms": a.latency_ms, "cost_usd": float(a.meta.get("cost_usd") or 0.0),
+            "cost_estimated": bool(a.meta.get("cost_estimated")),
             "error": a.meta.get("error"), "pending": False, "late": bool(a.meta.get("late")),
         }
 

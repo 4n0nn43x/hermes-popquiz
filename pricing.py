@@ -8,7 +8,8 @@ quiz prompts stay far below their thresholds.
 Choices made where the SPEC is silent:
 - ``cost()`` returns 0.0 for an unknown model (callers check ``price_for`` to show "price unknown").
 - ``Pricing.from_catalog`` skips entries with missing, non numeric or negative ``prompt``/``completion``
-  and also indexes ``aliases`` and ``canonical_slug``; lookups are case-insensitive.
+  and also indexes ``aliases`` (a list, or one string) and ``canonical_slug``; any other shape is ignored;
+  lookups are case-insensitive.
 - ``fetch_catalog`` accepts an injectable ``opener`` (``urllib.request.urlopen``-like) for tests and
   returns None on any failure; ``load_pricing`` = catalog if available, else the embedded fallback.
 - ``estimate_question_cost`` gives a rough per-question estimate (4 chars per token) used for the
@@ -88,7 +89,9 @@ class Pricing:
                 input_cache_write=_num(p.get("input_cache_write")) or 0.0,
             )
             prices[item["id"]] = price
-            names = [item.get("canonical_slug")] + list(item.get("aliases") or [])
+            aliases = item.get("aliases")
+            aliases = [aliases] if isinstance(aliases, str) else aliases if isinstance(aliases, list) else []
+            names = [item.get("canonical_slug")] + aliases
             for alias in names:
                 if isinstance(alias, str) and alias and alias not in prices:
                     prices[alias] = price
@@ -148,9 +151,13 @@ def fetch_catalog(timeout: float = 5, opener: Callable[..., Any] | None = None,
 
 
 def load_pricing(timeout: float = 5, opener: Callable[..., Any] | None = None) -> Pricing:
+    """Catalog prices if available, else the embedded fallback. Never raises (SPEC section 7)."""
     data = fetch_catalog(timeout=timeout, opener=opener)
     if data is not None:
-        pricing = Pricing.from_catalog(data)
-        if len(pricing):
+        try:
+            pricing = Pricing.from_catalog(data)
+        except Exception:  # noqa: BLE001 - an unexpected catalog shape must not break a game
+            pricing = None
+        if pricing is not None and len(pricing):
             return pricing
     return Pricing.fallback()
