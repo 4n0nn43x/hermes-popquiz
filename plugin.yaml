@@ -1,0 +1,22 @@
+name: popquiz
+label: Pop Quiz
+kind: standalone
+version: "0.1.0"
+author: 4n0nn43x
+description: >
+  Any document becomes a live quiz for the whole room in about a minute. Hermes writes the questions,
+  every question is checked against the source, people join from their phones with a QR code, and
+  AI models from the Nous Portal play the same questions with their latency and cost on screen.
+requires_hermes: ">=0.23.0"
+homepage: https://github.com/4n0nn43x/hermes-popquiz
+license: MIT
+capabilities:
+  - llm.model_override
+  - llm.provider_override
+provides_tools:
+  - popquiz_create
+  - popquiz_control
+  - popquiz_status
+  - popquiz_report
+provides_hooks: []
+# config_schema and final fields are completed during integration (SPEC section 9).

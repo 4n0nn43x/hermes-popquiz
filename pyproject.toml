@@ -1,0 +1,18 @@
+[project]
+name = "hermes-popquiz"
+version = "0.1.0"
+description = "Pop Quiz for Hermes Agent: any document becomes a live quiz for the whole room, and AI models play too"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+  "aiohttp>=3.9,<4",
+  "segno>=1.5,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+asyncio_mode = "auto"
