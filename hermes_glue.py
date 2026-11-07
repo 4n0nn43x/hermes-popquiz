@@ -253,17 +253,30 @@ def document_cache_dirs(home: Path | None) -> list[Path]:
     return [home / "cache" / "documents", home / "document_cache"]
 
 
+def session_cwd(ctx: Any) -> str:
+    try:
+        return str(ctx.session_cwd() or "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def allowed_roots(ctx: Any) -> list[Path]:
     roots: list[Path] = []
     roots.extend(document_cache_dirs(hermes_home()))
-    try:
-        cwd = ctx.session_cwd()
-    except Exception:  # noqa: BLE001
-        cwd = ""
+    cwd = session_cwd(ctx)
     if cwd and Path(cwd).resolve() != Path("/"):
         roots.append(Path(cwd).resolve())
     roots.append(SAMPLE_DIR)
     return roots
+
+
+def resolve_doc_path(doc_path: str, ctx: Any) -> str:
+    """A relative path is relative to the session folder (the gateway process cwd is somewhere else)."""
+    path = Path(str(doc_path)).expanduser()
+    cwd = session_cwd(ctx)
+    if not path.is_absolute() and cwd:
+        path = Path(cwd) / path
+    return str(path)
 
 
 def check_document_path(doc_path: str, roots: list[Path]) -> None:
@@ -537,6 +550,7 @@ class PopQuizApp:
         from .ingest import load_document
 
         roots = allowed_roots(self.ctx)
+        doc_path = resolve_doc_path(doc_path, self.ctx)
         check_document_path(doc_path, roots)
         return load_document(doc_path, roots)
 

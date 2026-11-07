@@ -7,6 +7,8 @@ description: >
   Any document becomes a live quiz for the whole room in about a minute. Hermes writes the questions,
   every question is checked against the source, people join from their phones with a QR code, and
   AI models from the Nous Portal play the same questions with their latency and cost on screen.
+  Runs a local web server (loopback by default, LAN only on request); model players are paid calls
+  capped by a budget, and they receive the document text.
 requires_hermes: ">=0.23.0"
 homepage: https://github.com/4n0nn43x/hermes-popquiz
 license: MIT
@@ -19,4 +21,54 @@ provides_tools:
   - popquiz_status
   - popquiz_report
 provides_hooks: []
-# config_schema and final fields are completed during integration (SPEC section 9).
+config_schema:
+  host:
+    type: str
+    default: "127.0.0.1"
+    label: Listen address
+    description: >
+      Address the quiz web server binds. Keep 127.0.0.1: "Open to phones" adds the machine's private
+      LAN address on demand. The host page and host commands only answer loopback clients.
+  port:
+    type: int
+    default: 8765
+    label: Port
+    description: TCP port of the quiz web server (the LAN site uses the same port).
+  public_url:
+    type: str
+    default: ""
+    label: Public join URL
+    description: Optional base URL encoded in the QR code instead of the LAN address (empty = LAN address).
+  players:
+    type: list
+    label: Model players
+    description: >
+      Up to 4 Nous Portal models that play each question, as {label, model, provider}. Every answer is
+      a paid call on your Portal account.
+    default:
+      - {label: "Claude Opus 5.5", model: "anthropic/claude-opus-5.5", provider: nous}
+      - {label: "DeepSeek V4 Flash", model: "deepseek/deepseek-v4-flash", provider: nous}
+      - {label: "Mercury 3", model: "inception/mercury-3", provider: nous}
+  budget_usd:
+    type: float
+    default: 1.0
+    label: Model budget per game (USD)
+    description: >
+      Spending cap for one game. Before each question the estimated cost of every model call is checked
+      against what is left; players that no longer fit are skipped, most expensive first.
+  time_limit_s:
+    type: int
+    default: 20
+    label: Seconds per question
+    description: Answer time for humans and models alike (5 to 120).
+  mode:
+    type: str
+    default: open_book
+    choices: [open_book, closed_book]
+    label: Mode
+    description: open_book sends the document text to the model players with each question; closed_book sends only the question.
+  auto_advance:
+    type: bool
+    default: false
+    label: Auto advance
+    description: Move to the next question 6 s after the leaderboard instead of waiting for the host.

@@ -3,7 +3,8 @@
 demo  : the whole product without Telegram, without a model call and without network: the sample
         runbook, a first draft with 2 wrong questions refused by the anchoring check, the corrected
         questions accepted, then a live game with cassette model players and robot phones, auto-advance,
-        URLs printed (and the projector opened in a browser with --browser).
+        URLs printed (and the projector opened in a browser with --browser). With --live the model players
+        are real paid calls through ctx.llm instead of the cassette (needs Hermes, capped by budget_usd).
 bench : N robot phones against the real server thread, prints p50/p95 question-to-answer latency.
 serve : host a quiz from a questions file by hand (host page), optional cassette or live models.
 """
@@ -37,6 +38,8 @@ def setup_parser(parser: argparse.ArgumentParser) -> None:
     demo.add_argument("--speed", type=float, default=1.0, help="cassette replay speed (1 = recorded latencies)")
     demo.add_argument("--seed", type=int, default=7, help="robot random seed")
     demo.add_argument("--exit", action="store_true", help="exit at the end instead of keeping the report page up")
+    demo.add_argument("--live", action="store_true",
+                      help="real model players through Hermes (paid Portal calls, capped by the budget_usd setting)")
 
     bench = sub.add_parser("bench", help="Load bench with robot phones (prints p50/p95)")
     bench.add_argument("--players", type=int, nargs="+", default=[60])
@@ -124,15 +127,26 @@ def demo(args: argparse.Namespace, ctx: Any = None, out: Callable[[str], None] =
     from .pricing import Pricing
     from .robots import run_robots
 
+    live = bool(getattr(args, "live", False))
+    if live and ctx is None:
+        out("--live needs Hermes (model calls go through ctx.llm): run it as `hermes popquiz demo --live`.")
+        return 2
     ctx = ctx if ctx is not None else _NullCtx()
     first, fixes, final = demo_drafts(args.questions)
-    app = PopQuizApp(ctx, llm_call=CassetteLlm(SAMPLE_DIR / "cassette.json", speed=args.speed), bots=default_bots(),
-                     settings_override={"host": "127.0.0.1", "port": int(args.port), "public_url": "",
-                                        "auto_advance": True, "budget_usd": 1.0, "time_limit_s": 20,
-                                        "mode": "open_book"},
-                     use_card=False, inject=False, pricing_loader=lambda _models: Pricing.fallback())
+    base_settings = {"host": "127.0.0.1", "port": int(args.port), "public_url": "", "auto_advance": True}
+    if live:
+        # Players, budget, time limit and mode come from the plugin settings; calls are real and paid.
+        app = PopQuizApp(ctx, settings_override=base_settings, use_card=False, inject=False)
+    else:
+        app = PopQuizApp(ctx, llm_call=CassetteLlm(SAMPLE_DIR / "cassette.json", speed=args.speed),
+                         bots=default_bots(),
+                         settings_override={**base_settings, "budget_usd": 1.0, "time_limit_s": 20, "mode": "open_book"},
+                         use_card=False, inject=False, pricing_loader=lambda _models: Pricing.fallback())
     doc_path = str(SAMPLE_DIR / "runbook.md")
-    out("Pop Quiz demo: the room vs the models (cassette models, robot phones, no model call, no network)")
+    if live:
+        out("Pop Quiz demo, LIVE: real model players through Hermes (paid Portal calls), robot phones")
+    else:
+        out("Pop Quiz demo: the room vs the models (cassette models, robot phones, no model call, no network)")
     out(f"Document: {doc_path}")
     out("")
     out(f"Step 1. The agent sends a first draft of {len(first)} questions to popquiz_create.")
@@ -151,7 +165,12 @@ def demo(args: argparse.Namespace, ctx: Any = None, out: Callable[[str], None] =
         app.shutdown()
         return 1
     out(f"  ready: room {res['room']}, {res['questions']} questions, players: {', '.join(res['players'])}")
-    out(f"  estimated model cost if live: ${float(res.get('estimated_cost_usd') or 0):.4f} (this demo: $0, cassette)")
+    est = float(res.get('estimated_cost_usd') or 0)
+    if live:
+        out(f"  estimated model cost: ${est:.4f}, budget cap ${float(res.get('budget_usd') or 0):.2f}"
+            + (" (degraded: main model only)" if res.get("degraded") else ""))
+    else:
+        out(f"  estimated model cost if live: ${est:.4f} (this demo: $0, cassette)")
     urls = res["urls"]
     if args.open_lan:
         lan = app.control("open_lan")
@@ -177,7 +196,16 @@ def demo(args: argparse.Namespace, ctx: Any = None, out: Callable[[str], None] =
         if t == "question":
             out(f"  question {int(ev.get('q', 0)) + 1}/{ev.get('total')}")
         elif t == "reveal":
-            out(f"  reveal   {int(ev.get('q', 0)) + 1}, model spend so far ${float(ev.get('spent_usd') or 0):.4f} (simulated)")
+            out(f"  reveal   {int(ev.get('q', 0)) + 1}, model spend so far ${float(ev.get('spent_usd') or 0):.4f}"
+                + ("" if live else " (simulated)"))
+            # on_event runs on the server thread, so reading the engine here is safe.
+            game = getattr(app.server, "_game", None)
+            try:
+                bots_info = game.reveal_event(int(ev.get("q", 0)))["bots"] if game is not None else []
+            except Exception:  # noqa: BLE001 - display only
+                bots_info = []
+            for b in bots_info:
+                out("    " + bot_line(b))
         elif t == "finished":
             finished.set()
 
@@ -230,6 +258,23 @@ def demo(args: argparse.Namespace, ctx: Any = None, out: Callable[[str], None] =
     finally:
         app.shutdown()
     return 0
+
+
+def bot_line(b: dict) -> str:
+    """One model player's answer at the reveal: choice, right or wrong, latency, cost, error."""
+    if b.get("pending"):
+        return f"{b.get('label', '?'):<18} still thinking (shown when it lands, 0 points)"
+    choice = b.get("choice")
+    letter = LETTERS[choice] if isinstance(choice, int) and 0 <= choice < len(LETTERS) else "-"
+    lat = b.get("latency_ms")
+    parts = [f"{b.get('label', '?'):<18} {letter} {'right' if b.get('correct') else 'wrong'}",
+             f"{lat / 1000:6.2f} s" if isinstance(lat, (int, float)) else "     - s",
+             f"${float(b.get('cost_usd') or 0):.5f}"]
+    if b.get("error"):
+        parts.append(f"[{b['error']}]")
+    if b.get("late"):
+        parts.append("[late]")
+    return "  ".join(parts)
 
 
 # ---------------------------------------------------------------------------------------------- bench

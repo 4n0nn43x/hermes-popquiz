@@ -279,9 +279,10 @@ late), after `reveal_s` -> `leaderboard`; then wait for host `next` (or auto-adv
 
 Security (all are tested):
 1. Bind 127.0.0.1 by default. `open_lan` adds a second site on the detected private LAN IPv4 (net.py,
-   psutil, prefer the default-route interface; never all interfaces). Never write the literal string
-   `0.0.0.0:` followed by a port, `INADDR_ANY`, or tunnel product names anywhere in code or docs
-   (scanner rules). A user-provided `public_url` setting may replace the join URL in the QR.
+   psutil, prefer the default-route interface; never all interfaces). Never write the all-interfaces
+   address joined to a port, the C socket constant for "any address", or tunnel product names anywhere
+   in code or docs (catalog scanner rule `bind_all_interfaces`, see `tools/skills_guard.py`). A
+   user-provided `public_url` setting may replace the join URL in the QR.
 2. No public route or public WS message ever contains the host token or another player's token
    (automated test over every route and message type).
 3. Player tokens required for `answer`/`resume`; one answer per player per question; server clock only.
