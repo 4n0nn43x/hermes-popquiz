@@ -8,7 +8,9 @@ Choices made where the SPEC is silent:
   what ``ask_bot`` sends.
 - The question block of ``input_text`` has a fixed layout (``QUESTION:`` then ``CHOICES:`` with
   ``A. ...`` lines, always last) so ``parse_input`` can recover (mode, prompt, choices) for the cassette.
-- Exceptions: class name ``PluginLlmTrustError`` -> "trust_denied"; ``ValueError`` (Hermes raises it
+- Exceptions: class name ``PluginLlmTrustError`` -> "trust_denied"; a provider refusal before any
+  generation (HTTP 4xx except 408, or ``insufficient_credits`` in the message; Hermes re-raises the
+  provider's own error when its fallbacks are exhausted) -> "refused"; ``ValueError`` (Hermes raises it
   on JSON that fails schema validation) -> "invalid_json"; anything else -> "error".
 - The answer is read from ``reply.parsed["choice"]`` (letter, case-insensitive, or 0-based int); if
   ``parsed`` is None the text is parsed as JSON, then searched for ``"choice": "X"``.
@@ -66,7 +68,7 @@ class BotResult:
     cache_read_tokens: int
     cache_write_tokens: int
     cost_usd: float
-    error: str | None  # None | "timeout" | "invalid_json" | "fallback" | "trust_denied" | "budget" | "error"
+    error: str | None  # None | "timeout" | "invalid_json" | "fallback" | "trust_denied" | "refused" | "budget" | "error"
 
     def meta(self) -> dict:
         """Meta dict for ``Game.submit_bot_answer``."""
@@ -160,6 +162,15 @@ def parse_choice(reply: LlmReply, n: int) -> int | None:
     return None
 
 
+def refused(exc: BaseException) -> bool:
+    """The provider said no before generating anything (e.g. ``insufficient_credits_for_paid_model``,
+    a 429 rate limit): nothing was billed. 408 is left out: the request may have started."""
+    status = getattr(exc, "status_code", None)
+    if isinstance(status, int) and 400 <= status < 500 and status != 408:
+        return True
+    return "insufficient_credits" in str(exc)
+
+
 def _cost(pricing: Any, spec: BotSpec, served: str, reply: LlmReply) -> float:
     if pricing is None:
         return 0.0
@@ -196,6 +207,8 @@ async def ask_bot(spec: BotSpec, question: Question, doc_text: str, mode: Mode, 
     except Exception as exc:  # noqa: BLE001 - every failure becomes a scored "no answer"
         if type(exc).__name__ == "PluginLlmTrustError":
             return result("trust_denied")
+        if refused(exc):
+            return result("refused")
         if isinstance(exc, ValueError):
             return result("invalid_json")
         return result("error")

@@ -187,3 +187,29 @@ async def test_ask_bots_parallel_and_never_raises():
     assert [r.bot_id for r in results] == ["bot1", "bot2", "bot3"]
     assert [r.error for r in results] == [None, "error", None]
     json.dumps([r.meta() for r in results])
+
+
+class APIStatusError(Exception):
+    """Shape of the provider error Hermes re-raises when its fallbacks are exhausted (openai SDK)."""
+
+    def __init__(self, status_code, message):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+PORTAL_NO_CREDIT = ("Error code: 404 - {'status': 404, 'message': \"Model 'anthropic/claude-opus-5.5' requires "
+                    "available credits.\", 'code': 'insufficient_credits_for_paid_model'}")
+
+
+@pytest.mark.parametrize("exc, error", [
+    (APIStatusError(404, PORTAL_NO_CREDIT), "refused"),
+    (APIStatusError(429, "rate_limited"), "refused"),
+    (APIStatusError(400, "context too long"), "refused"),
+    (RuntimeError("insufficient_credits_for_paid_model"), "refused"),
+    (APIStatusError(408, "request timeout"), "error"),
+    (APIStatusError(500, "upstream error"), "error"),
+    (ConnectionError("connection reset"), "error"),
+])
+async def test_ask_bot_provider_refusal_is_told_apart_from_unknown_errors(exc, error):
+    r = await ask_bot(OPUS, Q, DOC, Mode.OPEN_BOOK, fake_call(exc=exc), Pricing.fallback())
+    assert r.error == error and r.choice is None and r.cost_usd == 0.0

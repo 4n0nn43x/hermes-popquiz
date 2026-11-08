@@ -80,7 +80,8 @@ Tell the user briefly what was refused and how you fixed it.
 4. `popquiz_status` gives the state, players, model spend and public URLs.
 
 Model players are paid calls through the user's Nous Portal account, capped by the `budget_usd`
-setting; say so if the user asks about cost. If `degraded` is true, only the user's main model plays
+setting; say so if the user asks about cost. If the user has no credit or wants it free, tell them
+about the `players: [free]` setting (three Portal models priced $0). If `degraded` is true, only the user's main model plays
 (the plugin was not granted model overrides).
 
 ## 5. After the game

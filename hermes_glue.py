@@ -28,7 +28,7 @@ from typing import Any, Callable
 
 from .anchor import validate_questions
 from .bots import LlmReply
-from .model import BotSpec, GameError, Mode, default_bots
+from .model import BotSpec, GameError, Mode, default_bots, free_bots
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +104,10 @@ def read_settings(ctx: Any) -> dict:
 
 
 def parse_players(raw: Any) -> list[BotSpec]:
-    """``players`` setting -> BotSpec list (max 4). Bad entries are skipped; nothing valid -> defaults."""
+    """``players`` setting -> BotSpec list (max 4). Bad entries are skipped; nothing valid -> defaults.
+    The preset ``[free]`` (or ``free``) is the free formation (Portal models priced $0)."""
+    if raw in ("free", ["free"]):
+        return free_bots()
     if not isinstance(raw, list) or not raw:
         return default_bots()
     out: list[BotSpec] = []

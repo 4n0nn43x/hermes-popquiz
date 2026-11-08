@@ -293,7 +293,9 @@ a { color: var(--bot-b); }
   border-radius: 1.1rem; border: 2px solid color-mix(in srgb, var(--c) 55%, transparent);
   background: linear-gradient(100deg, color-mix(in srgb, var(--c) 24%, var(--bg2)), color-mix(in srgb, var(--c) 7%, var(--bg2)) 75%);
   color: var(--text); text-align: left; font-weight: 800; font-size: 1.15rem; line-height: 1.2;
-  touch-action: manipulation; transition: transform 120ms, opacity 200ms, background 200ms;
+  /* No background transition: the chosen key switches to dark ink at once, so a fading background
+     would put dark text on a dark tile for 200 ms (unreadable in a quick glance or a capture). */
+  touch-action: manipulation; transition: transform 120ms, opacity 200ms;
 }
 .pad-btn .key { font-size: 1.55rem; }
 .pad-text { min-width: 0; overflow-wrap: anywhere; }

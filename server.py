@@ -391,6 +391,9 @@ class QuizServer:
             response.headers[k] = v
         if request.path.startswith("/static/"):
             response.headers.setdefault("Cache-Control", "no-cache")
+            # ES modules always load in CORS mode; the Desktop pane's sandboxed frame has an opaque
+            # (null) origin, so without this header screen.js is blocked. Public files, no credentials.
+            response.headers["Access-Control-Allow-Origin"] = "*"
         else:
             response.headers["Cache-Control"] = "no-store"
 

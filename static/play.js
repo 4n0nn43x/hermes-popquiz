@@ -134,6 +134,7 @@ function onError(code) {
   } else if (code === "bad_room" || code === "no_game") fatal("Room not found", "Check the code on the big screen.");
   else if (code === "game_finished" || code === "game_over") fatal("Game over", "This quiz has ended. Thanks for playing!");
   else if (code === "game_full") fatal("Room full", "This quiz already has the maximum number of players.");
+  else if (code === "server_full") fatal("Room is full", "Try again in a moment.");
   else if (code === "bad_nickname") fatal("Nickname refused", "Use 1 to 24 visible characters.");
   else if (code === "too_late") $("#lock-note").textContent = "Too late for this one!";
   else if (code === "already_answered") $("#lock-note").textContent = "Answer locked.";

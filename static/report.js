@@ -14,13 +14,15 @@ function render(d) {
   $("#sub").textContent = `Room ${d.room} · ${d.played} of ${d.total} questions played`;
   const rows = d.room_vs_models || [];
   const roomRow = rows.find((r) => r.id === "room") || { score: 0, correct: 0 };
-  const best = (d.models || []).slice().sort((a, b) => b.score - a.score)[0];
+  // Same rule as the chat report: no best model unless one answered correctly.
+  const best = (d.models || []).filter((m) => m.correct > 0)
+    .sort((a, b) => b.correct - a.correct || b.score - a.score || a.cost_usd - b.cost_usd)[0];
   const sum = clear($("#summary"));
   sum.append(
     statBox(String(d.players), "players"),
     statBox(`${roomRow.correct}/${d.played}`, "The Room correct"),
-    statBox(best ? best.label : "-", "best model"),
-    statBox(fmtCost(d.spent_usd), "spent on models"),
+    statBox(best ? best.label : "None", best ? "best model" : "no model answered correctly"),
+    statBox(fmtCost(d.spent_usd, d.spent_estimated), d.simulated ? "simulated spend (cassette, no model call)" : "spent on models"),
   );
   const tb = clear($("#models"));
   const tr0 = el("tr");
@@ -29,7 +31,7 @@ function render(d) {
   (d.models || []).forEach((m) => {
     const tr = el("tr");
     tr.append(el("td", "", m.label), el("td", "", String(m.score)), el("td", "", String(m.correct)),
-      el("td", "", m.median_latency_ms === null ? "" : fmtLatency(m.median_latency_ms)), el("td", "", fmtCost(m.cost_usd)),
+      el("td", "", m.median_latency_ms === null ? "" : fmtLatency(m.median_latency_ms)), el("td", "", fmtCost(m.cost_usd, m.cost_estimated)),
       el("td", "", (m.errors || []).join(", ")));
     tb.appendChild(tr);
   });

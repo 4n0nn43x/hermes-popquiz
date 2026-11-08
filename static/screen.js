@@ -117,6 +117,7 @@ function errorLabel(err) {
   if (err === "budget") return "budget reached";
   if (err === "invalid_json") return "no valid answer";
   if (err === "trust_denied") return "not allowed";
+  if (err === "refused") return "refused";
   if (err) return "error";
   return "";
 }
@@ -176,10 +177,12 @@ function onReveal(m) {
     sub: totalVotes ? `${totalVotes} vote${totalVotes === 1 ? "" : "s"}` : "no votes",
   }));
   (m.bots || []).forEach((b, i) => {
+    const answered = b.choice !== null && b.choice !== undefined;
     const c = card({
       cls: "card-bot " + botClass(b.id), label: b.label, choice: b.choice, correct: !!b.correct,
-      latency: b.choice !== null && b.choice !== undefined ? fmtLatency(b.latency_ms) : (b.error === "timeout" ? "> limit" : ""),
-      cost: b.cost_usd ? fmtCost(b.cost_usd) : "", flag: errorLabel(b.error) || (b.late ? "late" : ""),
+      latency: answered ? fmtLatency(b.latency_ms) : (b.error === "timeout" ? "> limit" : ""),
+      // an answered call always shows its cost, so a free model reads "$0"
+      cost: b.cost_usd || answered ? fmtCost(b.cost_usd, b.cost_estimated) : "", flag: errorLabel(b.error) || (b.late ? "late" : ""),
     });
     c.style.setProperty("--delay", `${200 + i * 140}ms`);
     cards.appendChild(c);

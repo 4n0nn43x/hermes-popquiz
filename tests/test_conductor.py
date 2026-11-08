@@ -242,3 +242,24 @@ async def test_report_data_contents():
     assert {m["id"] for m in data["models"]} == {"bot1", "bot2"}
     assert "token" not in json.dumps(data).lower()
     assert c.report is not None  # report.build_report from PQ-A
+
+
+async def test_cassette_game_report_is_simulated():
+    llm = llm_factory()
+    llm.simulated = True  # what CassetteLlm reports in replay mode
+    c, game, hub = make(llm, pricing=Price({"anthropic/claude-opus-5.5": 0.01}))
+    await run_to_end(c)
+    assert c.report.data["simulated"] is True and c.report_data()["simulated"] is True
+    assert "simulated (recorded cassette, no model call)" in c.report.markdown
+    c2, _, _ = make(llm_factory(), pricing=Price({"anthropic/claude-opus-5.5": 0.01}))
+    await run_to_end(c2)
+    assert c2.report_data()["simulated"] is False and "simulated" not in c2.report.markdown
+
+
+def test_cassette_replay_is_simulated_and_record_is_not(tmp_path):
+    from popquiz_plugin.cassette import CassetteLlm
+
+    path = tmp_path / "c.json"
+    assert CassetteLlm(path, mode="record", inner=llm_factory()).simulated is False
+    path.write_text('{"version": 1, "entries": {}}')
+    assert CassetteLlm(path).simulated is True

@@ -341,3 +341,11 @@ def test_shutdown_stops_the_real_server(app_ctx):
     assert _wait(lambda: not any(t.name == "popquiz-server" and t.ident not in before
                                  for t in threading.enumerate()))
     assert app.status()["state"] == "idle"
+
+
+def test_players_free_preset_is_the_free_formation():
+    from popquiz_plugin.model import free_bots
+    for raw in (["free"], "free"):
+        bots = hermes_glue.parse_players(raw)
+        assert [b.model for b in bots] == [b.model for b in free_bots()]
+        assert all(b.provider == "nous" and b.model.endswith(":free") for b in bots)

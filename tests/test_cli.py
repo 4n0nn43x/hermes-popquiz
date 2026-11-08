@@ -70,6 +70,12 @@ def test_bot_line_shows_choice_latency_cost_and_errors():
     line = cli.bot_line({"label": "Opus", "choice": None, "correct": False, "latency_ms": 21000, "cost_usd": 0,
                          "error": "timeout"})
     assert " - wrong" in line and "[timeout]" in line
+    line = cli.bot_line({"label": "Opus", "choice": None, "correct": False, "latency_ms": 21000, "cost_usd": 0.0158,
+                         "cost_estimated": True, "error": "timeout"})
+    assert "~$0.01580 (est.)" in line
+    line = cli.bot_line({"label": "Opus", "choice": None, "correct": False, "latency_ms": 900, "cost_usd": 0,
+                         "error": "refused"})
+    assert "$0.00000  [refused]" in line and "est." not in line
     assert "still thinking" in cli.bot_line({"label": "Opus", "pending": True})
 
 
@@ -77,3 +83,31 @@ def test_no_subcommand_prints_usage():
     lines: list[str] = []
     assert cli.run(parse([]), None, lines.append) == 2
     assert lines[0].startswith("usage: hermes popquiz")
+
+
+def test_free_demo_plays_the_free_formation_live(monkeypatch):
+    seen: dict = {}
+
+    class FakeApp:
+        def __init__(self, ctx, **kw):
+            seen.update(kw)
+
+        def create(self, args):
+            return {"status": "stop here"}
+
+        def shutdown(self):
+            seen["shutdown"] = True
+
+    lines: list[str] = []
+    assert cli.run(parse(["demo", "--free"]), None, lines.append) == 2  # --free implies --live: needs Hermes
+    monkeypatch.setattr(cli, "PopQuizApp", FakeApp)
+    assert cli.run(parse(["demo", "--live", "--free", "--port", "0"]), object(), lines.append) == 1
+    players = seen["settings_override"]["players"]
+    assert [b.model for b in players] == [b.model for b in cli_free_bots()]
+    assert "llm_call" not in seen and seen["shutdown"]  # real ctx.llm calls, no cassette
+    assert any("Portal models priced $0" in line for line in lines)
+
+
+def cli_free_bots():
+    from popquiz_plugin.model import free_bots
+    return free_bots()

@@ -98,6 +98,20 @@ DEFAULT_BOTS: tuple[BotSpec, ...] = (
 )
 
 
+# Free formation (`players: [free]`, `demo --live --free`): Portal models priced $0, checked on
+# 2026-11-07 to answer the JSON schema. The Portal's free list changes: check /v1/models.
+FREE_BOTS: tuple[BotSpec, ...] = (
+    BotSpec(id="bot1", label="Solar Mini 4 (free)", provider="nous", model="upstage/solar-mini4:free"),
+    BotSpec(id="bot2", label="LongCat 2.5 (free)", provider="nous", model="meituan/longcat-2.5:free"),
+    BotSpec(id="bot3", label="Beam 1.0 (free)", provider="nous", model="reflection/beam-1.0-501b-a23b:free"),
+)
+
+
 def default_bots() -> list[BotSpec]:
     """Fresh copies of the 3 default model players (SPEC section 7)."""
     return [BotSpec(b.id, b.label, b.provider, b.model) for b in DEFAULT_BOTS]
+
+
+def free_bots() -> list[BotSpec]:
+    """Fresh copies of the free formation."""
+    return [BotSpec(b.id, b.label, b.provider, b.model) for b in FREE_BOTS]

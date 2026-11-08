@@ -409,6 +409,50 @@ async def test_a3_call_in_flight_when_the_game_ends_is_booked():
     assert game.answers[0][0].meta["cost_estimated"] is True
 
 
+class _StatusError(Exception):
+    def __init__(self, status_code, message):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+async def test_a3_refusal_before_generation_costs_nothing():
+    """The Portal refused every call (no credit): $0 booked, nothing estimated, every question still tried."""
+    calls = []
+
+    async def no_credit(spec, instructions, input_text, schema, timeout_s):
+        calls.append(spec.id)
+        raise _StatusError(404, "Error code: 404 - {'code': 'insufficient_credits_for_paid_model'}")
+
+    c, game, hub = make(no_credit, pricing=Price({"anthropic/claude-opus-5.5": 0.4}), budget=0.5, bots=[C_BOTS[0]])
+    c.start()
+    await asyncio.wait_for(c.task, 15)
+    assert calls == ["bot1"] * 3 and game.spent_usd == 0.0
+    rows = [r["bots"][0] for r in hub.of("reveal")]
+    assert [r["error"] for r in rows] == ["refused"] * 3
+    assert all(r["cost_usd"] == 0.0 and r["cost_estimated"] is False for r in rows)
+    assert c.report_data()["spent_usd"] == 0.0
+
+
+@pytest.mark.parametrize("exc", [ConnectionError("reset"), _StatusError(502, "bad gateway")])
+async def test_a3_unknown_failure_after_launch_books_estimate_and_budget_holds(exc):
+    calls = []
+
+    async def failing(spec, instructions, input_text, schema, timeout_s):
+        calls.append(spec.id)
+        raise exc
+
+    c, game, hub = make(failing, pricing=Price({"anthropic/claude-opus-5.5": 0.4}), budget=0.5, bots=[C_BOTS[0]])
+    c.start()
+    await asyncio.wait_for(c.task, 15)
+    assert calls == ["bot1"] and game.spent_usd == pytest.approx(0.4) and game.spent_usd <= 0.5
+    rows = [r["bots"][0] for r in hub.of("reveal")]
+    assert [r["error"] for r in rows] == ["error", "budget", "budget"]
+    assert rows[0]["cost_estimated"] is True
+    data = c.report_data()
+    assert data["spent_estimated"] is True and data["models"][0]["cost_estimated"] is True
+    assert "Model spend: ~$0.4000 (est.)" in c.report.markdown
+
+
 async def test_a3_real_cost_used_when_the_reply_reports_tokens():
     from popquiz_plugin.bots import LlmReply
 

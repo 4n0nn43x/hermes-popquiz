@@ -190,6 +190,18 @@ async def test_security_headers_on_every_response(srv):
             assert r.headers["Content-Security-Policy"] == CSP
 
 
+async def test_static_allows_any_origin_but_pages_do_not(srv):
+    """The Desktop pane frames /screen with an opaque origin: its module scripts need ACAO on /static/."""
+    async with aiohttp.ClientSession() as session:
+        for name in ("screen.js", "common.js", "style.css"):
+            async with session.get(base(srv) + "/static/" + name, headers={"Origin": "null"}) as r:
+                assert r.status == 200 and r.headers.get("Access-Control-Allow-Origin") == "*", name
+                assert "Access-Control-Allow-Credentials" not in r.headers
+        for path in ("/screen", "/health", "/host", f"/api/report?room={srv.status()['room']}"):
+            async with session.get(base(srv) + path, headers={"Origin": "null"}) as r:
+                assert "Access-Control-Allow-Origin" not in r.headers, path
+
+
 async def test_health(srv):
     async with aiohttp.ClientSession() as session:
         async with session.get(base(srv) + "/health") as r:
@@ -748,3 +760,17 @@ def test_api_requires_running_server():
         s.host_command("start")
     assert exc.value.code == "not_running"
     assert s.report() is None and s.urls()["base"].startswith("http://127.0.0.1:")
+
+
+def test_frontend_shows_estimates_server_full_and_readable_locked_key():
+    js = {p.name: p.read_text() for p in STATIC.glob("*.js")}
+    assert "fmtCost(usd, estimated = false)" in js["common.js"] and "(est.)" in js["common.js"]
+    assert "cost: b.cost_usd || answered ? fmtCost(b.cost_usd, b.cost_estimated)" in js["screen.js"]
+    assert "fmtCost(m.cost_usd, m.cost_estimated)" in js["report.js"]
+    assert "fmtCost(d.spent_usd, d.spent_estimated)" in js["report.js"] and "d.simulated" in js["report.js"]
+    assert 'code === "server_full") fatal("Room is full", "Try again in a moment.")' in js["play.js"]
+    css = re.sub(r"/\*.*?\*/", "", (STATIC / "style.css").read_text(), flags=re.S)
+    pad = re.search(r"\.pad-btn \{(.*?)\}", css, re.S).group(1)
+    # the chosen key turns to dark ink at once: a fading background would show dark text on a dark tile
+    transition = re.search(r"transition:([^;]*);", pad).group(1)
+    assert "opacity" in transition and "background" not in transition and "color" not in transition

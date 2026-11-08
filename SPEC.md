@@ -22,7 +22,7 @@ conversation so the agent can propose remediation. First user: a team testing it
 
 ```
 plugin.yaml          manifest (see section 9)
-pyproject.toml       [project].dependencies = plugin runtime deps; dev deps for tests
+pyproject.toml       [project].dependencies = plugin runtime deps only (no extras; tests use `uv run --with`)
 __init__.py          register(ctx): tools, /popquiz, CLI, skill, on_unload  (PQ-C)
 model.py             dataclasses and enums (PQ-A)
 anchor.py            normalization + quote anchoring + question validation (PQ-A)
@@ -116,7 +116,8 @@ class Document:
   ASCII; join hyphenated line breaks `(\w)-\s*\n\s*(\w)`; drop U+00AD; strip Markdown emphasis/heading
   markers; casefold; collapse whitespace. Pure and idempotent.
 - `anchor(quote: str, doc_norm: str) -> AnchorResult(ok: bool, score: float, code: str|None, offset: int, closest: str)`:
-  normalized quote shorter than 12 chars: `quote_too_short`. Exact `find`: score 1.0. Else sliding
+  normalized quote shorter than 12 chars: `quote_too_short`; normalized quote longer than 400 chars:
+  `quote_too_long` (checked before any matching). Exact `find`: score 1.0. Else sliding
   window seeded by the 3 rarest words, `difflib.SequenceMatcher(autojunk=False)`, score = matched chars /
   len(quote); accept at >= 0.90. **Number guard**: every number in the quote must appear in the chosen
   window, else `number_mismatch` (regression case: doc "30 days", quote "90 days" scores 0.985 without
@@ -181,7 +182,11 @@ class Game:
   latency of humans who picked the room's choice. Stored as an Answer with actor_id "room".
 - Bot answers arriving after close are recorded with `meta["late"]=True`, 0 points, still shown.
 - `spent_usd` accumulates `meta["cost_usd"]` of bot answers; the conductor stops calling the most
-  expensive bot when the budget would be exceeded (bot answer recorded with error `budget`).
+  expensive bot when the budget would be exceeded (bot answer recorded with error `budget`). A launched
+  call whose real cost is unknown (timeout, cancelled at the deadline or at `end`, network or 5xx error,
+  reply without token counts) is booked at its estimate (`meta.cost_estimated=true`); a call refused before
+  any generation (`trust_denied`, or a provider 4xx such as `insufficient_credits_for_paid_model`: error
+  `refused`) is booked at $0. Reveal bot entries carry `cost_estimated`.
 - Events returned by transitions are plain dicts with key `t` (see section 8) so the server can
   broadcast them unchanged.
 
@@ -200,7 +205,7 @@ LlmCall = Callable[[BotSpec, str, str, dict, float], Awaitable[LlmReply]]
 class BotResult:
     bot_id: str; choice: int | None; latency_ms: int; served_model: str
     input_tokens: int; output_tokens: int; cache_read_tokens: int; cache_write_tokens: int
-    cost_usd: float; error: str | None   # None | "timeout" | "invalid_json" | "fallback" | "trust_denied" | "budget" | "error"
+    cost_usd: float; error: str | None   # None | "timeout" | "invalid_json" | "fallback" | "trust_denied" | "refused" | "budget" | "error"
 
 def build_prompt(question: Question, doc_text: str, mode: Mode) -> tuple[str, str]
 ANSWER_SCHEMA = {"type": "object", "properties": {"choice": {"type": "string", "enum": ["A","B","C","D"][:n]}}, "required": ["choice"]}
@@ -211,7 +216,9 @@ async def ask_bots(specs, question, doc_text, mode, llm_call, pricing, timeout_s
 - The model sees only the prompt and labelled choices A..D (never answer_index, quote, explanation).
   Open book: document first (stable prefix, cache friendly), then the question. Closed book: question only.
 - `asyncio.wait_for(..., timeout_s + 1)`; timeout -> error "timeout". Exceptions whose class name is
-  `PluginLlmTrustError` -> "trust_denied". Missing/invalid choice -> "invalid_json". If
+  `PluginLlmTrustError` -> "trust_denied". A provider refusal before generation (an exception with an HTTP
+  `status_code` 4xx other than 408, or `insufficient_credits` in its message; Hermes re-raises the provider's
+  own error once its fallbacks are exhausted) -> "refused". Missing/invalid choice -> "invalid_json". If
   `reply.model` differs from `spec.model` (ignoring provider prefix and case) -> keep the answer but
   set error "fallback" (shown as "fallback model" on screen, still scored).
 - `pricing.Pricing`: `Pricing.from_catalog(json_dict)`, `Pricing.fallback()` (embedded table dated
@@ -222,10 +229,14 @@ async def ask_bots(specs, question, doc_text, mode, llm_call, pricing, timeout_s
   no key); the glue caches it 24 h. Never raise to the caller: fall back.
   Defaults verified 2026-11-07 ($ per million tokens, in/out): `anthropic/claude-opus-5.5` 4.00/20.00
   (cache read 0.20, write 5.00); `deepseek/deepseek-v4-flash` 0.091/0.182; `inception/mercury-3` 0.10/0.35.
+- Free formation (`model.FREE_BOTS`, `free_bots()`): `upstage/solar-mini4:free`, `meituan/longcat-2.5:free`,
+  `reflection/beam-1.0-501b-a23b:free`, provider `nous`, priced $0 on the Portal list of 2026-11-07 and checked
+  to answer the JSON schema. Selected by the setting `players: [free]` or `hermes popquiz demo --live --free`.
 - `cassette.CassetteLlm(path, mode="replay"|"record", inner: LlmCall|None, speed: float = 1.0)`:
   key = sha256 of (model, mode, prompt, choices). Replay sleeps the recorded latency / speed and
   returns the recorded reply; missing key -> reply with parsed None (counted invalid) and a logged
-  warning. JSON file format documented in the module docstring.
+  warning. JSON file format documented in the module docstring. `simulated` is true in replay mode; the
+  conductor passes it to the report, which labels the model spend as simulated.
 - `sample/`: `runbook.md` (an original fictional incident runbook, ~1 500 words, numbers inside such
   as retention days and thresholds), `questions.json` (8 valid questions + 2 deliberately wrong ones
   used by tests and the demo's "refused then corrected" step), `cassette.json` (replies for the 3
@@ -266,7 +277,7 @@ WebSocket messages (JSON objects, key `t`):
   `question{q, total, prompt, choices, ends_at_ms, server_now_ms}`,
   `answered{q, count, humans, bots_done[]}`,
   `reveal{q, answer_index, explanation, source_quote, distribution[], room{choice, correct},
-  bots[{id, label, choice, correct, latency_ms, cost_usd, error}]}`,
+  bots[{id, label, choice, correct, latency_ms, cost_usd, cost_estimated, error}]}`,
   `leaderboard{top[{nickname, score}], room_vs_models[{id, label, score, correct}], you{rank, score}}`,
   `finished{report_url}`, `error{code}`, `pong`.
 - Lobby counts and leaderboards are broadcast in batches (at most every 250 ms).
@@ -291,7 +302,18 @@ Security (all are tested):
    `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`. No inline scripts, no CDN.
 5. Limits: WS message <= 2 KB (`max_msg_size`), 200 players, 5 messages/s per connection, 10 joins
    per minute per IP, nickname rules from section 6, `Origin` must match the Host for state-changing
-   WS messages (screen may send Origin null when embedded in the Desktop sandboxed frame).
+   WS messages and for `screen` (screen may send Origin null when embedded in the Desktop sandboxed
+   frame; no Origin header = non-browser client, accepted). Host allowlist on every route, WebSocket
+   included: `localhost`, `127.0.0.1`, `::1`, the bound host, the served LAN IP and the host of
+   `public_url`, else 421 (DNS rebinding); no Host header is accepted. A socket must pick a role (`join`,
+   `resume`, `screen`, `host_auth`) within 10 s. At most 20 sockets per non-loopback IP. 4 loopback slots
+   above the connection cap accept only `host_auth` (anything else: `server_full`); when the server is full
+   a newcomer evicts the oldest socket without a role. Each connection has an outbox of 64 messages: a
+   client too slow to read is disconnected (it resumes with its token) and never stalls a broadcast. Loopback
+   joins are exempt from the join rate limit only when no `public_url` is set. One player per socket: a
+   second `join`/`resume` on the same socket gets `already_joined`. `/static/*` carries
+   `Access-Control-Allow-Origin: *` (public files, no credentials) so the module scripts load in the
+   Desktop pane's opaque-origin frame; no other route does.
 6. The server stops at game end + 10 minutes idle, on `stop()`, and on plugin unload.
 
 Frontend (`static/`, vanilla JS modules, no build step, English UI): polished, projector-first.
@@ -319,7 +341,8 @@ Command `/popquiz [open|start|next|end]`: SYNC handler. Without argument it call
 with the actions that make sense in the current state; returns a short text. CLI:
 `hermes popquiz demo [--robots 24] [--port 8765] [--open-lan]` (sample doc, sample questions incl. the
 refused-then-corrected step printed to the terminal, cassette bots, robots, auto-advance; zero model
-calls, zero gateway), `hermes popquiz bench [--players 60]` (prints p50/p95), `hermes popquiz serve`.
+calls, zero gateway; `--live` uses real model players from the `players` setting through ctx.llm, paid
+and capped by `budget_usd`; `--free` implies `--live` with the free formation of section 7), `hermes popquiz bench [--players 60]` (prints p50/p95), `hermes popquiz serve`.
 Chat card: in `popquiz_create` (agent turn, session bound) post one progress card with
 `ctx.post_message`, keep the handle, and edit it from `on_event` at most every 2 s; if posting is
 unavailable (CLI), fall back to returning text. Report delivery: `ctx.inject_message(report, role="user")`
@@ -328,7 +351,7 @@ runs the SYNC `ctx.llm.complete_structured(provider=spec.provider, model=spec.mo
 thread executor (works from the server loop whatever loop ctx.llm binds to). Capabilities declared:
 `llm.model_override`, `llm.provider_override`; if not granted, degrade to one bot = the main model.
 Settings (`config_schema`): `host`, `port` (8765), `public_url`, `players` (list of `{label, model,
-provider}`, default the 3 models of section 7), `budget_usd` (1.0), `time_limit_s` (20), `mode`
+provider}`, default the 3 models of section 7; the preset `[free]` is the free formation), `budget_usd` (1.0), `time_limit_s` (20), `mode`
 (open_book), `auto_advance` (false). Read settings at call time, never in `register()`.
 
 ## 10. Tests (target >= 120, all green, no network, no model calls)
@@ -339,7 +362,8 @@ too large, outside roots, symlink escape), engine (every transition, wrong state
 late answer, scoring formula, The Room majority/tie/empty, late joiner, budget stop, public_view
 never leaks answer before reveal nor tokens), bots (valid, invalid JSON, timeout, trust denied,
 fallback model, cost), pricing (catalog parse, missing price, fallback), cassette (record/replay),
-report (content, CSV, length < 4000 chars for chat).
+report (content, CSV, length < 4000 chars for chat; no best model when no model answered correctly;
+estimated costs read `~$x (est.)`; cassette spend labelled simulated).
 Server: route security sweep, host routes refused from non-loopback and without token, XSS nickname,
 oversized WS message, rate limit, Origin check, full game with 5 simulated clients + cassette bots,
 reconnect with token keeps score, server start/stop leaves no thread and no open port.

@@ -139,3 +139,69 @@ def test_sample_wrong_questions_are_refused_then_corrected(plugin_root):
 def test_sample_files_have_no_em_dash(plugin_root):
     for name in ("runbook.md", "questions.json", "cassette.json"):
         assert "\u2014" not in (plugin_root / "sample" / name).read_text(encoding="utf-8"), name
+
+
+def bots_only_game(answer) -> Game:
+    """One human, 2 questions; answer(qi, q, bot_id) -> (choice, meta) for each default bot."""
+    clock = Clock()
+    questions = [Question(index=i, prompt=f"Question {i}?", choices=["a", "b", "c"], answer_index=0,
+                          source_quote=f"Fact {i} is described here") for i in range(2)]
+    game = Game(game_id="g", room_code="ROOM42", questions=questions, bots=default_bots(), clock=clock, title="Doc")
+    pid = game.add_player("Ada")[0].id
+    game.start()
+    for qi, q in enumerate(questions):
+        clock.t += 1
+        game.submit_answer(pid, qi, 0)
+        for b in game.bots:
+            choice, meta = answer(qi, q, b.id)
+            game.submit_bot_answer(b.id, qi, choice, 2000, meta)
+        game.close_question()
+        game.show_leaderboard()
+        game.next_question()
+    return game
+
+
+def test_no_best_model_when_every_model_was_refused():
+    game = bots_only_game(lambda qi, q, bid: (None, {"cost_usd": 0.0, "error": "refused"}))
+    rep = build_report(game)
+    assert rep.data["best_model"] is None and rep.data["best_value_model"] is None
+    assert "Best model" not in rep.markdown and "The Room beat" not in rep.markdown
+    assert "No model answered (errors: refused), so there is no best model" in rep.markdown
+    assert "Model spend: $0.0000 (budget" in rep.markdown
+
+
+def test_no_best_model_when_no_model_answered_correctly():
+    game = bots_only_game(lambda qi, q, bid: (1, {"cost_usd": 0.001}))
+    md = build_report(game).markdown
+    assert "Best model" not in md and "No model answered correctly" in md
+
+
+def test_estimated_costs_read_as_estimates():
+    def answer(qi, q, bid):
+        if bid == "bot1":
+            return None, {"cost_usd": 0.02, "cost_estimated": True, "error": "timeout"}
+        return 0, {"cost_usd": 0.001}
+
+    rep = build_report(bots_only_game(answer))
+    assert rep.data["spent_estimated"] is True
+    assert "Model spend: ~$0.0440 (est.)" in rep.markdown
+    assert "| ~$0.0400 (est.) |" in rep.markdown  # the timed-out model's row
+    assert "| $0.0020 |" in rep.markdown  # real costs stay plain
+
+
+def test_cassette_spend_is_labelled_simulated():
+    game = bots_only_game(lambda qi, q, bid: (0, {"cost_usd": 0.01}))
+    md = build_report(game, simulated=True).markdown
+    assert "Model spend: $0.0600 simulated (recorded cassette, no model call)" in md
+    assert "| Simulated cost |" in md
+    assert "simulated" not in build_report(game).markdown
+
+
+def test_no_cheaper_claim_when_models_cost_the_same():
+    """Real free game, 2026-11-07: every model right at $0 printed "Same accuracy for less" (false)."""
+    game = bots_only_game(lambda qi, q, bid: (0, {"cost_usd": 0.0}))
+    md = build_report(game).markdown
+    assert "Best model on this document" in md and "for less" not in md
+    game = play_game()
+    game.bot_correct["bot2"] = game.bot_correct["bot1"]  # same accuracy, bot2 really is cheaper
+    assert "Same accuracy for less: **DeepSeek V4 Flash**" in build_report(game).markdown

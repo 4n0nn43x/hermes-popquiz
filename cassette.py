@@ -102,6 +102,11 @@ class CassetteLlm:
     def __len__(self) -> int:
         return len(self.entries)
 
+    @property
+    def simulated(self) -> bool:
+        """Replay makes no model call: the report labels its spend as simulated."""
+        return self.mode == "replay"
+
     def key_for(self, spec: BotSpec, input_text: str) -> str:
         mode, prompt, choices = parse_input(input_text)
         return cassette_key(spec.model, mode, prompt, choices)

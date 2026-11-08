@@ -8,8 +8,10 @@ Bot answers stay server-side until the reveal: clients only learn which bots are
 
 Budget: before each question the estimated cost of every call is checked against the budget left
 (`game.plan_bots`). A launched call is billed even if we stop waiting, so when its real cost is unknown
-(timeout, cancelled at the deadline or at `end`, exception, reply without token counts) it is booked at
-its estimate with `meta["cost_estimated"] = True`; a reply with token counts is booked at its real cost.
+(timeout, cancelled at the deadline or at `end`, network or other error, reply without token counts) it
+is booked at its estimate with `meta["cost_estimated"] = True`; a reply with token counts is booked at
+its real cost. A call refused before any generation (`trust_denied`, or a provider 4xx such as
+`insufficient_credits_for_paid_model`: error "refused") costs nothing and is booked at $0.
 
 The conductor talks to the transport through a small hub interface (implemented by `QuizServer`):
 `await hub.broadcast(msg, personal=None)`, `hub.mark_dirty(kind)`, `hub._notify(event)`,
@@ -269,7 +271,7 @@ class Conductor:
                                                      "error": r.error}
         if r.cost_usd:
             self._last_cost[spec.id] = float(r.cost_usd)
-        if not (r.input_tokens or r.output_tokens) and r.error != "trust_denied":
+        if not (r.input_tokens or r.output_tokens) and r.error not in ("trust_denied", "refused"):
             meta = self._estimated(meta, spec.id)  # called but no usage known: book the estimate
         try:
             self.game.submit_bot_answer(spec.id, qi, r.choice, r.latency_ms, meta)
@@ -398,7 +400,7 @@ class Conductor:
         if builder is None:
             return
         try:
-            self.report = builder(self.game)
+            self.report = builder(self.game, simulated=bool(getattr(self.llm_call, "simulated", False)))
         except TypeError:
             try:
                 self.report = builder(game=self.game, questions=self.questions, bots=self.bots)
@@ -452,11 +454,14 @@ class Conductor:
                            "correct": g.bot_correct.get(b.id, 0),
                            "median_latency_ms": lat[len(lat) // 2] if lat else None,
                            "cost_usd": round(sum(float(a.meta.get("cost_usd") or 0.0) for a in rows), 6),
+                           "cost_estimated": any(a.meta.get("cost_estimated") for a in rows),
                            "errors": sorted({a.meta.get("error") for a in rows if a.meta.get("error")})})
         played = sum(1 for x in questions if x["played"])
         return {
             "room": self.room, "title": self.title, "total": g.total, "played": played,
             "players": len(g.players), "spent_usd": round(g.spent_usd, 6),
+            "spent_estimated": any(m["cost_estimated"] for m in models),
+            "simulated": bool(getattr(self.llm_call, "simulated", False)),
             "top": [{"nickname": p.nickname, "score": p.score} for p in g.ranking()[:10]],
             "room_vs_models": g.room_vs_models(), "models": models, "questions": questions,
         }

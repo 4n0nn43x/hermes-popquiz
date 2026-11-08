@@ -114,12 +114,14 @@ export const store = {
   },
 };
 
-export function fmtCost(usd) {
+// A cost booked at its estimate (call launched, real cost unknown) reads "~$x (est.)".
+export function fmtCost(usd, estimated = false) {
   const v = Number(usd) || 0;
-  if (v === 0) return "$0";
-  if (v < 0.001) return "<$0.001";
-  if (v < 0.1) return "$" + v.toFixed(4);
-  return "$" + v.toFixed(2);
+  let text = "$" + v.toFixed(2);
+  if (v === 0) text = "$0";
+  else if (v < 0.001) text = "<$0.001";
+  else if (v < 0.1) text = "$" + v.toFixed(4);
+  return estimated && v > 0 ? `~${text} (est.)` : text;
 }
 
 export function fmtLatency(ms) {

@@ -11,6 +11,8 @@ propose fixes.
 
 First users: a team testing itself on its own runbooks and product docs. Then a teacher and a class.
 
+![The projector after question 1 of a real game: the document quote, the room's votes, and three free Portal models with their latency and cost](docs/screens/01-projector-question.png)
+
 ## Try it (no Telegram, no model call)
 
 ```bash
@@ -29,8 +31,22 @@ three model players replayed from a cassette. Open the `Projector` URL it prints
 (let real phones on your Wi-Fi join), `--browser`, `--speed`.
 
 The model latencies and costs shown by the demo come from `sample/cassette.json`, a hand-written cassette
-with realistic values; they are not measurements. `hermes popquiz demo --live` plays the same game with real
-model calls (paid, see Disclosures).
+with realistic values; they are not measurements, and the report labels that spend as simulated.
+`hermes popquiz demo --live` plays the same game with real model calls (paid, see Disclosures).
+
+### Play with real models for free
+
+```bash
+hermes popquiz demo --live --free --questions 3
+```
+
+`--free` plays three Nous Portal models priced $0: `upstage/solar-mini4:free`, `meituan/longcat-2.5:free` and
+`reflection/beam-1.0-501b-a23b:free`. It needs the two capabilities and a Portal login, no credit. For your own
+quizzes, set the preset `players: [free]` in the plugin settings. Measured here on 2026-11-07 (3 questions,
+open book, sample runbook, 25 players): Solar Mini 4 answered in 4.2, 4.8 and 2.0 s, LongCat 2.5 in 6.4, 3.8 and
+3.2 s, Beam 1.0 in 4.7, 1.0 and 1.2 s; all 9 answers right, total model spend $0. The Portal's free list
+changes over time; the current one is in `https://inference-api.nousresearch.com/v1/models` (ids ending in
+`:free`).
 
 ### With your agent
 
@@ -55,11 +71,12 @@ From a clone of this repository:
 
 | Check | Command | Result here (Hermes v0.23.0) |
 |---|---|---|
-| Tests (no network, no model) | `uv run --no-project --with pytest --with pytest-asyncio --with aiohttp --with segno pytest -q` | `318 passed, 1 skipped` (the skip is a real PDF that needs `anydoc`) |
+| Tests (no network, no model) | `uv run --no-project --with pytest --with pytest-asyncio --with aiohttp --with segno pytest -q` | `TESTS_LINE` (the skip is a real PDF that needs `anydoc`) |
 | Catalog validator | `hermes plugins validate .` | `Validation passed`, `security scan - safe`, 0 warnings |
 | Load check | `hermes plugins doctor . --ci` | `registrations: 4 tool(s), 0 hook(s)`, exit 0 |
 | Whole product, no cost | `hermes popquiz demo --questions 3 --exit` | refused then corrected, game, report |
 | Load bench | `hermes popquiz bench --players 60 200` | 60 phones: p50 15 ms, p95 16 ms; 200 phones: p50 25 ms, p95 37 ms (question to answer, server side, 1000/1000 answers) |
+| Real models, free | `hermes popquiz demo --live --free --questions 3` | 2026-11-07: 9 real answers, 1.0 to 6.4 s, all right, $0 |
 | Real models (paid) | `hermes popquiz demo --live --questions 3` | estimate printed before the game ($0.0493 for 3 questions on the sample) |
 
 The anchoring check alone, on the sample's two wrong quotes, is the first step of any demo:
@@ -75,16 +92,16 @@ REFUSED q8 [quote_not_found] Within how many business days is the written post-i
 
 | Surface | Where | Why |
 |---|---|---|
-| `ctx.llm.complete_structured(provider=, model=, json_schema=, timeout=)` | `hermes_glue.py:173` | Each model player answers with JSON, timed, in a worker thread |
-| Capabilities `llm.model_override` + `llm.provider_override`, `ctx.has_capability` | `plugin.yaml`, `hermes_glue.py:130` | Consent screen; without both, only your main model plays |
+| `ctx.llm.complete_structured(provider=, model=, json_schema=, timeout=)` | `hermes_glue.py:176` | Each model player answers with JSON, timed, in a worker thread |
+| Capabilities `llm.model_override` + `llm.provider_override`, `ctx.has_capability` | `plugin.yaml`, `hermes_glue.py:133` | Consent screen; without both, only your main model plays |
 | `ctx.register_tool` (4 tools) | `__init__.py:107-118` | `popquiz_create` (refuse and fix loop), `popquiz_control`, `popquiz_status`, `popquiz_report` |
-| `ctx.register_command` + `ctx.ask_choice` | `__init__.py:123`, `hermes_glue.py:710` | `/popquiz` with buttons that fit the game state |
-| `ctx.post_message` + `handle.edit` | `hermes_glue.py:327`, `:369` | One progress card in the chat, edited at most every 2 s |
-| `ctx.inject_message(role="user")` | `hermes_glue.py:688` | The final report goes back into the conversation |
+| `ctx.register_command` + `ctx.ask_choice` | `__init__.py:123`, `hermes_glue.py:713` | `/popquiz` with buttons that fit the game state |
+| `ctx.post_message` + `handle.edit` | `hermes_glue.py:330`, `:372` | One progress card in the chat, edited at most every 2 s |
+| `ctx.inject_message(role="user")` | `hermes_glue.py:691` | The final report goes back into the conversation |
 | `ctx.register_skill` | `__init__.py:131` | `skills/host-a-quiz/SKILL.md` |
 | `ctx.register_cli_command` | `__init__.py:127` | `hermes popquiz demo / bench / serve` |
-| `ctx.get_config`, `ctx.state`, `ctx.session_cwd`, `ctx.on_unload` | `hermes_glue.py:89`, `:198-225`, `:258`, `__init__.py:133` | Settings read at call time, 24 h price cache, allowed folder, clean stop |
-| `hermes_constants.get_hermes_home` | `hermes_glue.py:243` | Profile-aware location of the document cache |
+| `ctx.get_config`, `ctx.state`, `ctx.session_cwd`, `ctx.on_unload` | `hermes_glue.py:89`, `:201-228`, `:261`, `__init__.py:133` | Settings read at call time, 24 h price cache, allowed folder, clean stop |
+| `hermes_constants.get_hermes_home` | `hermes_glue.py:246` | Profile-aware location of the document cache |
 | Desktop SDK `SandboxedFrame` (opt-in) | `desktop/plugin.js` | Projector pane in Hermes Desktop |
 
 ## Disclosures: what it does on your computer
@@ -103,7 +120,10 @@ REFUSED q8 [quote_not_found] Within how many business days is the written post-i
   on your Nous Portal account. `budget_usd` (default $1.00 per game) is checked before each question against
   the estimated cost; players that no longer fit are skipped, most expensive first. Costs are computed by the
   plugin from the token counts Hermes returns and the public price list, so they are estimates of what the
-  provider bills. If the Portal refuses a call, Hermes may retry it on its fallback chain and then on your
+  provider bills. A call refused before any generation (no credit, rate limit, any other 4xx) counts $0. A call
+  whose real cost stays unknown after it left (timeout, network error, reply without token counts) counts at its
+  estimate and is shown as `~$x (est.)`. The preset `players: [free]` (or `demo --live --free`) uses only
+  models the Portal prices at $0. If the Portal refuses a call, Hermes may retry it on its fallback chain and then on your
   main model and provider; such answers are labelled "fallback model" and still count.
 - **Document text sent to model providers.** In `open_book` mode (default) the full extracted text of the
   document goes to every model player with every question. In `closed_book` mode only the question and its
@@ -120,7 +140,7 @@ REFUSED q8 [quote_not_found] Within how many business days is the written post-i
 ## Settings
 
 `plugins.entries.popquiz.settings.*`: `host` (127.0.0.1), `port` (8765), `public_url` (empty), `players`
-(up to 4 `{label, model, provider}`), `budget_usd` (1.0), `time_limit_s` (20), `mode` (`open_book` or
+(up to 4 `{label, model, provider}`, or the preset `[free]`), `budget_usd` (1.0), `time_limit_s` (20), `mode` (`open_book` or
 `closed_book`), `auto_advance` (false). They are read each time a quiz is created.
 
 ## Limits
@@ -135,11 +155,12 @@ REFUSED q8 [quote_not_found] Within how many business days is the written post-i
 - `open_book` cost grows with the document size (the whole text is sent with each question).
 - In-process only: the chat card handle is bound to the gateway loop, so the plugin does not run in the
   isolated host.
-- Model players need Portal credit for paid models; without it every model answer is an error and the game
-  still runs for the humans.
-- The Desktop pane (`desktop/plugin.js`, opt-in) frames the projector page in the SDK's sandboxed frame. In that
-  frame the page's scripts load only if the server sends `Access-Control-Allow-Origin` on `/static/`, which it
-  does not yet: until then the pane stays on "Connecting". Not tried inside the Desktop app.
+- Model players need Portal credit for paid models; without it every paid model answer is refused (shown as
+  "refused", $0) and the game still runs for the humans. The free formation needs no credit.
+- The Desktop pane (`desktop/plugin.js`, opt-in) frames the projector page in the SDK's sandboxed frame. The
+  server sends `Access-Control-Allow-Origin: *` on `/static/` only (public files, no credentials), which the
+  module scripts need in that opaque-origin frame. Checked in headless Chromium with the same
+  `sandbox="allow-scripts"` frame (the projector renders, no console error); not tried inside the Desktop app.
 
 ## Team
 

@@ -7,8 +7,9 @@ description: >
   Any document becomes a live quiz for the whole room in about a minute. Hermes writes the questions,
   every question is checked against the source, people join from their phones with a QR code, and
   AI models from the Nous Portal play the same questions with their latency and cost on screen.
-  Runs a local web server (loopback by default, LAN only on request); model players are paid calls
-  capped by a budget, and they receive the document text.
+  Runs a local web server (loopback by default, LAN only on request); model players are calls on your
+  Portal account, paid unless you pick the free preset, capped by a budget, and they receive the
+  document text.
 requires_hermes: ">=0.23.0"
 homepage: https://github.com/4n0nn43x/hermes-popquiz
 license: MIT
@@ -44,7 +45,8 @@ config_schema:
     label: Model players
     description: >
       Up to 4 Nous Portal models that play each question, as {label, model, provider}. Every answer is
-      a paid call on your Portal account.
+      a call on your Portal account, paid unless the model is free. The preset [free] plays three
+      Portal models priced $0 (Solar Mini 4, LongCat 2.5, Beam 1.0).
     default:
       - {label: "Claude Opus 5.5", model: "anthropic/claude-opus-5.5", provider: nous}
       - {label: "DeepSeek V4 Flash", model: "deepseek/deepseek-v4-flash", provider: nous}
