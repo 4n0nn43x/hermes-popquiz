@@ -71,7 +71,7 @@ From a clone of this repository:
 
 | Check | Command | Result here (Hermes v0.23.0) |
 |---|---|---|
-| Tests (no network, no model) | `uv run --no-project --with pytest --with pytest-asyncio --with aiohttp --with segno pytest -q` | `TESTS_LINE` (the skip is a real PDF that needs `anydoc`) |
+| Tests (no network, no model) | `uv run --no-project --with pytest --with pytest-asyncio --with aiohttp --with segno pytest -q` | `339 passed, 1 skipped` (the skip is a real PDF that needs `anydoc`) |
 | Catalog validator | `hermes plugins validate .` | `Validation passed`, `security scan - safe`, 0 warnings |
 | Load check | `hermes plugins doctor . --ci` | `registrations: 4 tool(s), 0 hook(s)`, exit 0 |
 | Whole product, no cost | `hermes popquiz demo --questions 3 --exit` | refused then corrected, game, report |
@@ -104,7 +104,7 @@ REFUSED q8 [quote_not_found] Within how many business days is the written post-i
 | `hermes_constants.get_hermes_home` | `hermes_glue.py:246` | Profile-aware location of the document cache |
 | Desktop SDK `SandboxedFrame` (opt-in) | `desktop/plugin.js` | Projector pane in Hermes Desktop |
 
-## Disclosures: what it does on your computer
+## Disclosures
 
 - **Listening port.** A web server (aiohttp, in its own thread) starts when a quiz is created, on
   `127.0.0.1:8765` (settings `host`, `port`). It stops at game end plus 10 minutes, on `popquiz_control end`
