@@ -166,7 +166,7 @@ REFUSED q8 [quote_not_found] Within how many business days is the written post-i
 
 - TODO(user): name, role, background, country.
 - TODO(user): GitHub, X and LinkedIn links.
-- TODO(user): past projects and hackathons.
+- TODO(user): past projects.
 
 ## License
 

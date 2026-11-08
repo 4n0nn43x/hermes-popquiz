@@ -341,7 +341,7 @@ def test_a1_worst_case_at_the_cap_is_bounded():
               "source_quote": _shuffled_quote(doc, anchor.MAX_QUOTE, seed=s)[:anchor.MAX_QUOTE]} for s in range(20)]
     t0 = time.perf_counter()
     v = anchor.validate_questions(items, doc)
-    assert time.perf_counter() - t0 < 10.0  # 20 adversarial (fuzzy path) quotes; measured in the PQ-FIX log
+    assert time.perf_counter() - t0 < 10.0  # 20 adversarial (fuzzy path) quotes
     assert {r["code"] for r in v.rejected} == {"quote_not_found"}
 
 

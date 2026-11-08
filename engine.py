@@ -1,6 +1,6 @@
 """Pure game state machine (SPEC section 6). Synchronous, no I/O, no asyncio, injectable clock.
 
-Choices made where the SPEC is silent (also in the PQ-A build log):
+Choices made where the SPEC is silent:
 - Scores (``Player.score``, bot and Room scores) and streaks are applied in ``close_question``, not at
   submit time, so no public view can leak who answered correctly before the reveal. ``Answer.points``
   is computed at submit time.

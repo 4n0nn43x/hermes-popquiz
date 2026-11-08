@@ -1,9 +1,7 @@
 # Pop Quiz: the room vs the models (SPEC)
 
-Authority order for this repo: SPEC > tests > code. Research behind every decision:
-`../_research/R2-popquiz.md` (architecture, APIs with file:line), `../_research/R1-manuel-plugin.md`
-(plugin packaging, verified skeleton), `../_research/analyse-2026-11-06/1-faisabilite-technique.md`
-and `5-soumission-revue.md` (scanner rules, review reasons). Target: Hermes Agent v0.23.0
+Design reference for this repository: when the code changes behavior, this document and the tests
+change with it. Target: Hermes Agent v0.23.0
 (`requires_hermes: ">=0.23.0"`), Python >= 3.11 (Hermes runs 3.14).
 
 ## 1. Product in one paragraph
@@ -23,25 +21,25 @@ conversation so the agent can propose remediation. First user: a team testing it
 ```
 plugin.yaml          manifest (see section 9)
 pyproject.toml       [project].dependencies = plugin runtime deps only (no extras; tests use `uv run --with`)
-__init__.py          register(ctx): tools, /popquiz, CLI, skill, on_unload  (PQ-C)
-model.py             dataclasses and enums (PQ-A)
-anchor.py            normalization + quote anchoring + question validation (PQ-A)
-ingest.py            path -> Document (PQ-A)
-engine.py            pure game state machine, injectable clock, scoring, The Room (PQ-A)
-bots.py              model players over an injected async LlmCall (PQ-A)
-cassette.py          record/replay LlmCall for CI and the no-cost demo (PQ-A)
-pricing.py           Portal public price list + embedded dated fallback (PQ-A)
-report.py            Markdown + CSV + data report (PQ-A)
-sample/              sample document, sample questions, sample cassette (PQ-A)
-net.py               LAN IPv4 detection via psutil (PQ-B)
-server.py            aiohttp app in a dedicated thread with its own loop (PQ-B)
-conductor.py         async game loop: timers, bots, broadcasts (PQ-B)
-robots.py            simulated phone players over WebSocket (demo, load bench) (PQ-B)
-static/              join.html play.html screen.html host.html report.html *.js style.css (PQ-B)
-hermes_glue.py       ctx.llm adapter, chat card, inject, settings (PQ-C)
-cli.py               `hermes popquiz demo|bench|serve` (PQ-C)
-skills/host-a-quiz/SKILL.md  usage skill for the agent (PQ-C)
-desktop/plugin.js    bonus: Desktop pane wrapping /screen in SandboxedFrame (PQ-C)
+__init__.py          register(ctx): tools, /popquiz, CLI, skill, on_unload
+model.py             dataclasses and enums
+anchor.py            normalization + quote anchoring + question validation
+ingest.py            path -> Document
+engine.py            pure game state machine, injectable clock, scoring, The Room
+bots.py              model players over an injected async LlmCall
+cassette.py          record/replay LlmCall for CI and the no-cost demo
+pricing.py           Portal public price list + embedded dated fallback
+report.py            Markdown + CSV + data report
+sample/              sample document, sample questions, sample cassette
+net.py               LAN IPv4 detection via psutil
+server.py            aiohttp app in a dedicated thread with its own loop
+conductor.py         async game loop: timers, bots, broadcasts
+robots.py            simulated phone players over WebSocket (demo, load bench)
+static/              join.html play.html screen.html host.html report.html *.js style.css
+hermes_glue.py       ctx.llm adapter, chat card, inject, settings
+cli.py               `hermes popquiz demo|bench|serve`
+skills/host-a-quiz/SKILL.md  usage skill for the agent
+desktop/plugin.js    bonus: Desktop pane wrapping /screen in SandboxedFrame
 tests/               pytest; core tests never import Hermes
 scripts/             loadtest, record-cassette (outside runtime path)
 README.md            catalog page: Try it, Verify in 5 minutes, disclosures, limits

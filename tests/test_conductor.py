@@ -241,7 +241,7 @@ async def test_report_data_contents():
     assert q0["correct_pct"] == 0.0 and q0["trap"]["count"] == 1 and q0["played"]
     assert {m["id"] for m in data["models"]} == {"bot1", "bot2"}
     assert "token" not in json.dumps(data).lower()
-    assert c.report is not None  # report.build_report from PQ-A
+    assert c.report is not None  # report.build_report
 
 
 async def test_cassette_game_report_is_simulated():
