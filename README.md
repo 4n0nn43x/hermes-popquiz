@@ -162,11 +162,9 @@ REFUSED q8 [quote_not_found] Within how many business days is the written post-i
   module scripts need in that opaque-origin frame. Checked in headless Chromium with the same
   `sandbox="allow-scripts"` frame (the projector renders, no console error); not tried inside the Desktop app.
 
-## Team
+## Author
 
-- TODO(user): name, role, background, country.
-- TODO(user): GitHub, X and LinkedIn links.
-- TODO(user): past projects.
+Maintained by [@4n0nn43x](https://github.com/4n0nn43x). Issues and pull requests are welcome.
 
 ## License
 
